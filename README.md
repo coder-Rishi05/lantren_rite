@@ -1,51 +1,57 @@
-🏮 Lantern Odyssey
-A Cozy Endless Glide through Moonlit Liyue Valleys.
+# 🏮 Lantern Odyssey
 
-Glide across pagoda rooftops, grind festive lantern lines, scatter flocks of cranes, and relax to a lush procedural bamboo flute & felt piano soundtrack. A relaxing, atmospheric endless runner built entirely in a single HTML file.
+A cozy endless glide through moonlit Liyue valleys.
 
-✨ Features
-```
-🎵 Procedural Studio-Grade Soundtrack: A fully synthesized, real-time harmonic engine featuring warm felt piano chords, resonant guzheng/harp arpeggios, and expressive bamboo flute (Xiao/Dizi) melodies.
-🎋 Three Musical Moods: Switch between Liyue Lullaby, Starlit Harbor, and Cozy Lo-Fi Breeze to change the tempo, atmosphere, and instrumentation.
-🏯 Liyue-Inspired World: Procedurally generated terrain featuring traditional wooden pavilions, pagoda rooftops, festive lantern bunting lines, and ancient archways.
-🦅 Interactive Wildlife: Cranes and birds scatter gracefully into the twilight sky as you glide past.
-🍂 Atmospheric Effects: Dynamic sky cycles, twinkling stars, a luminous moon, floating Xiao Lanterns, and golden ginkgo leaves that drift from rustling trees.
-🎮 Cozy Controls: Simple one-button controls (Tap, Space, or Up Arrow) for jumping, grinding, and backflipping.
-🧘 Zen Mode: Toggle "Zen Mode" for an endless, crash-free relaxation experience.
-🕹️ How to Play
-```
-Open the file: Launch index.html in any modern web browser.
-```
-Start: Click BEGIN JOURNEY or press Space / Tap.
-```
-Controls:
+> Glide across pagoda rooftops, grind festive lantern lines, scatter flocks of cranes, and relax to a lush procedural bamboo flute and felt piano soundtrack.
 
-```
-Tap / Space / Up Arrow: Jump onto rooftops or into the sky.
+<p align="center">
+  <img src="https://img.shields.io/badge/Genre-Endless%20Runner-8B5CF6?style=for-the-badge" alt="Genre" />
+  <img src="https://img.shields.io/badge/Style-Cozy%20Atmospheric-10B981?style=for-the-badge" alt="Style" />
+  <img src="https://img.shields.io/badge/Input-Mouse%20%7C%20Touch%20%7C%20Keyboard-0EA5E9?style=for-the-badge" alt="Input" />
+</p>
 
-Hold in Mid-Air: Perform a graceful Ribbon Backflip (earn bonus points!).
+## ✨ Features
 
-Rooftops & Lantern Lines: Land on them to Grind for sparks, speed, and distance bonuses.
+- 🎵 Procedural studio-grade soundtrack with warm felt piano, guzheng/harp textures, and expressive bamboo flute melodies
+- 🎋 Three musical moods: Liyue Lullaby, Starlit Harbor, and Cozy Lo-Fi Breeze
+- 🏯 Liyue-inspired world with pagoda rooftops, lantern bunting, archways, and traditional wooden pavilions
+- 🦅 Interactive wildlife, including cranes and birds that scatter into the twilight sky
+- 🍂 Dynamic atmosphere with stars, moonlight, glowing lanterns, drifting leaves, and cinematic sky cycles
+- 🎮 Simple one-button controls for jumping, grinding, and backflipping
+- 🧘 Zen Mode for a relaxed, crash-free endless glide
 
-Objective: Glide as far as possible, collect Jade & Lantern Orbs, and trigger fireworks at checkpoints.
+## 🕹️ How to Play
 
-⚙️ Settings
-Use the glassmorphism HUD controls at the top-right of the screen:
-```
-Zen Mode: Toggles crash detection. ON = Endless relaxation. OFF = Land cleanly after backflips or tumble.
+1. Open `index.html` in any modern web browser.
+2. Click `BEGIN JOURNEY` or press `Space` / tap.
+3. Glide as far as possible, collect Jade and Lantern Orbs, and trigger fireworks at checkpoints.
 
-🎆 Fireworks: Manually launch a festive firework burst.
-🎵 Mood: Cycles through the three musical styles.
-🔊 Audio: Mute/Unmute and adjust volume.
-🛠️ Technical Details
+### Controls
 
-Zero Dependencies: Built with vanilla JavaScript, HTML5 Canvas, and Tailwind CSS (via CDN).
+- `Tap / Space / Up Arrow` — Jump onto rooftops or into the sky
+- Hold in mid-air — Perform a graceful ribbon backflip for bonus points
+- Rooftops & lantern lines — Land on them to grind for sparks, speed, and distance bonuses
 
-Web Audio API: The entire soundtrack is synthesized in real-time using oscillators, filters, and convolver reverb—no pre-recorded audio files.
+## ⚙️ Settings
 
-Procedural Generation: Terrain, architecture, and collectibles are generated on-the-fly as you glide.
+Use the glassmorphism HUD controls in the top-right corner of the screen:
 
-Responsive: Adapts to any screen size and supports Mouse, Touch, and Keyboard input.
+- `Zen Mode` — Toggles crash detection. On = endless relaxation; Off = land cleanly after backflips or tumbles
+- `Fireworks` — Launch a festive fireworks burst
+- `Mood` — Cycle through the three musical styles
+- `Audio` — Mute/unmute and adjust volume
 
-📜 License
+## 🛠️ Technical Details
+
+- Zero dependencies — built with vanilla JavaScript, HTML5 Canvas, and Tailwind CSS via CDN
+- Web Audio API — soundtrack generated in real time using oscillators, filters, and convolver reverb
+- Procedural generation — terrain, architecture, and collectibles are created on the fly
+- Responsive — adapts to various screen sizes and supports mouse, touch, and keyboard input
+
+## 📜 License
+
 Free to use, modify, and share. Made with 🏮 and a sense of wonder.
+
+---
+
+Made for quiet nights, glowing rooftops, and smooth moonlit runs.
