@@ -106,6 +106,14 @@
                 <span>Zen: <strong id="zenStatus">ON</strong></span>
             </button>
 
+            <!-- Restart Run (0m) Button -->
+            <button id="hudRestartBtn" type="button" class="glass-pill p-2 sm:px-3 sm:py-2 rounded-full flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Restart Run from 0m">
+                <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span class="hidden lg:inline">Restart (0m)</span>
+            </button>
+
             <!-- Firework Burst Button -->
             <button id="fireworkBtn" type="button" class="glass-pill p-2 sm:px-3 sm:py-2 rounded-full flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Launch Festive Firework">
                 <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1263,6 +1271,17 @@
             resetPlayerRun();
         });
 
+        document.getElementById('hudRestartBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            audio.init();
+            if (currentState === GAME_STATE.TITLE) {
+                startGame();
+            } else {
+                resetPlayerRun();
+                showTrickFeedback('JOURNEY RESTARTED', 'FRESH START FROM 0M');
+            }
+        });
+
         document.getElementById('enableZenOnCrashBtn').addEventListener('click', () => {
             zenMode = true;
             syncZenButtonUI();
@@ -1319,9 +1338,9 @@
         });
 
         function startGame() {
-            currentState = GAME_STATE.PLAYING;
             const titleOverlay = document.getElementById('titleOverlay');
             titleOverlay.classList.add('opacity-0', 'pointer-events-none');
+            resetPlayerRun();
             launchFirework(width * 0.65, height * 0.22);
             showTrickFeedback('THE LANTERN RITE BEGINS', 'GRIND PAGODA ROOFS & SCATTER CRANES');
         }
@@ -1333,30 +1352,44 @@
             score = 0;
             lanternsCollected = 0;
             comboMultiplier = 1;
+            comboTimer = 0;
             distanceMeters = 0;
             nextCheckpointMeters = 250;
 
-            player.x = 200;
-            player.y = getTerrainY(200);
+            startX = 200;
+            player.x = startX;
+            player.y = getTerrainY(startX);
             player.speed = 7.5;
             player.vx = 7.5;
             player.vy = 0;
-            player.angle = getTerrainSlopeAngle(200);
+            player.angle = getTerrainSlopeAngle(startX);
             player.grounded = true;
             player.grinding = false;
             player.activeGrindSurface = null;
+            player.grindTicks = 0;
             player.flipAccumulator = 0;
             player.flipsCompletedInAir = 0;
             player.boostTimer = 0;
+
+            isHoldingAction = false;
+            jumpPressedThisFrame = false;
 
             collectibles.length = 0;
             structures.length = 0;
             grindSurfaces.length = 0;
             floraItems.length = 0;
             perchedBirds.length = 0;
+            particles.length = 0;
+            fallingLeaves.length = 0;
             lastSpawnedChunkX = 350;
             spawnWorldUpTo(2800);
             initScarf();
+
+            // Snap camera cleanly to the 0m starting slope
+            camera.zoom = 1;
+            camera.targetZoom = 1;
+            camera.x = player.x - (width * 0.24 / camera.zoom);
+            camera.y = player.y - (height * 0.56 / camera.zoom);
 
             currentState = GAME_STATE.PLAYING;
             updateHUD();
@@ -1452,7 +1485,9 @@
                     player.grindTicks++;
                     player.boostTimer = Math.max(player.boostTimer, 40);
                     comboTimer = Math.max(comboTimer, 220);
-                    score += 1.5 * comboMultiplier;
+                    if (!isTitleAutopilot) {
+                        score += 1.5 * comboMultiplier;
+                    }
 
                     // Emit golden rooftop grind sparks
                     if (Math.random() < 0.75) {
@@ -1650,7 +1685,9 @@
                 if (st.type === 'archway' && !st.lit && Math.abs(player.x - st.x) < 35) {
                     st.lit = true;
                     st.litGlow = 1;
-                    score += 100 * comboMultiplier;
+                    if (!isTitleAutopilot) {
+                        score += 100 * comboMultiplier;
+                    }
                     player.boostTimer = Math.max(player.boostTimer, 70);
                     audio.playGateChimeSfx();
                     spawnLanternBurst(st.x, st.y - 65, 9);
@@ -1715,6 +1752,9 @@
                     collectibles.splice(i, 1);
                     continue;
                 }
+
+                // Do not collect orbs during title screen attract mode
+                if (isTitleAutopilot) continue;
 
                 const dist = Math.hypot(player.x - orb.x, (player.y - 14) - orb.y);
                 if (dist < orb.radius + 28) {
