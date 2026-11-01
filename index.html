@@ -1,0 +1,2508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lantern Odyssey — A Cozy Endless Glide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            box-sizing: border-box;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #090a14;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        /* Soft glassmorphism and glowing UI utilities */
+        .glass-pill {
+            background: rgba(16, 18, 36, 0.55);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 200, 110, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 179, 71, 0.1);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-pill:hover {
+            border-color: rgba(255, 200, 110, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 22px rgba(255, 179, 71, 0.28);
+            transform: translateY(-1px);
+        }
+        .glass-pill:active {
+            transform: translateY(1px);
+        }
+        .lantern-glow-text {
+            text-shadow: 0 0 25px rgba(255, 190, 92, 0.75), 0 0 50px rgba(255, 140, 40, 0.35);
+        }
+        .subtle-glow-text {
+            text-shadow: 0 2px 12px rgba(255, 190, 92, 0.45);
+        }
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-7px); }
+        }
+        .animate-float {
+            animation: floatSlow 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="relative text-amber-50">
+
+    <!-- Main Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top HUD Bar -->
+    <header class="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 sm:px-8 sm:py-5 pointer-events-none">
+        <!-- Score & Distance -->
+        <div class="flex items-center gap-3 sm:gap-6">
+            <div class="glass-pill px-4 py-2 rounded-2xl flex items-center gap-4">
+                <div>
+                    <div class="text-[10px] sm:text-xs uppercase tracking-widest text-amber-200/70">Score</div>
+                    <div id="hudScore" class="font-cinzel text-lg sm:text-2xl font-bold text-amber-100 subtle-glow-text">0</div>
+                </div>
+                <div class="h-7 w-[1px] bg-amber-200/20"></div>
+                <div>
+                    <div class="text-[10px] sm:text-xs uppercase tracking-widest text-amber-200/70">Distance</div>
+                    <div id="hudDistance" class="font-cinzel text-sm sm:text-lg font-semibold text-amber-50/90">0 m</div>
+                </div>
+                <div class="h-7 w-[1px] bg-amber-200/20"></div>
+                <div>
+                    <div class="text-[10px] sm:text-xs uppercase tracking-widest text-amber-200/70">Lanterns</div>
+                    <div id="hudLanterns" class="font-cinzel text-sm sm:text-lg font-semibold text-amber-300">0</div>
+                </div>
+            </div>
+
+            <!-- Active Trick / Combo Banner -->
+            <div id="comboPill" class="glass-pill px-4 py-2 rounded-2xl opacity-0 transition-opacity duration-300 hidden sm:flex items-center gap-2 border-amber-400/50">
+                <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                <span id="comboText" class="font-cinzel text-sm font-semibold text-amber-200 tracking-wide">Backflip x1</span>
+            </div>
+        </div>
+
+        <!-- Interactive Control Buttons -->
+        <div class="flex items-center gap-2 sm:gap-2.5 pointer-events-auto flex-wrap justify-end">
+            <!-- Zen Mode Toggle -->
+            <button id="zenBtn" type="button" class="glass-pill px-3 py-2 sm:px-3.5 sm:py-2 rounded-full flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Toggle Zen Mode (No Crashes)">
+                <span id="zenDot" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+                <span>Zen: <strong id="zenStatus">ON</strong></span>
+            </button>
+
+            <!-- Firework Burst Button -->
+            <button id="fireworkBtn" type="button" class="glass-pill p-2 sm:px-3 sm:py-2 rounded-full flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Launch Festive Firework">
+                <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M8.757 15.243l-2.121 2.121m12.728 0l-2.121-2.121M8.757 8.757L6.636 6.636"/>
+                </svg>
+                <span class="hidden lg:inline">Fireworks</span>
+            </button>
+
+            <!-- Music Mood Selector -->
+            <button id="moodBtn" type="button" class="glass-pill px-3 py-2 sm:px-3.5 sm:py-2 rounded-full flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Switch Musical Mood">
+                <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+                <span id="moodLabel">Liyue Lullaby</span>
+            </button>
+
+            <!-- Audio Mute & Volume Control -->
+            <div class="glass-pill px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center gap-2">
+                <button id="audioBtn" type="button" class="flex items-center gap-1.5 text-xs font-medium text-amber-100 cursor-pointer" title="Mute / Unmute Music">
+                    <svg id="iconSoundOn" class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                    </svg>
+                    <svg id="iconSoundOff" class="w-4 h-4 text-rose-300 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                    </svg>
+                </button>
+                <input id="volumeSlider" type="range" min="0" max="100" value="75" class="hidden md:block w-16 accent-amber-300 cursor-pointer h-1 bg-amber-100/20 rounded-lg" title="Music Volume">
+            </div>
+        </div>
+    </header>
+
+    <!-- Center Floating Trick Notification (Mobile + Desktop) -->
+    <div id="floatingFeedback" class="fixed top-24 left-1/2 -translate-x-1/2 z-10 pointer-events-none text-center transition-all duration-500 opacity-0 transform -translate-y-2">
+        <div id="feedbackTitle" class="font-cinzel text-lg sm:text-2xl font-bold text-amber-200 lantern-glow-text tracking-widest">GRACEFUL LANDING</div>
+        <div id="feedbackSub" class="text-xs sm:text-sm text-amber-100/80 font-medium">+250 PTS • SPEED BOOST</div>
+    </div>
+
+    <!-- Title / Start Overlay -->
+    <div id="titleOverlay" class="fixed inset-0 z-30 flex flex-col items-center justify-center px-4 text-center bg-gradient-to-b from-[#090a14]/60 via-transparent to-[#090a14]/80 transition-opacity duration-700">
+        <div class="animate-float max-w-xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/15 border border-amber-300/30 text-amber-200 text-xs uppercase tracking-[0.25em] mb-4">
+                <span>Lantern Rite Festival Edition</span>
+            </div>
+            <h1 class="font-cinzel text-4xl sm:text-6xl md:text-7xl font-bold tracking-wider text-amber-50 lantern-glow-text mb-4">
+                LANTERN ODYSSEY
+            </h1>
+            <p class="text-sm sm:text-base text-amber-100/80 max-w-md mx-auto leading-relaxed mb-8 font-light">
+                Glide across moonlit Liyue valleys, grind across glowing pagoda rooftops and lantern lines, scatter flocks of cranes, and relax to a lush bamboo flute &amp; felt piano soundtrack.
+            </p>
+
+            <!-- Start Button -->
+            <button id="startBtn" type="button" class="glass-pill px-8 py-4 rounded-full font-cinzel text-base sm:text-lg font-semibold tracking-widest text-amber-100 border-amber-300/50 hover:bg-amber-400/20 cursor-pointer shadow-2xl">
+                BEGIN JOURNEY
+            </button>
+
+            <!-- Controls Guide -->
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-amber-100/75 max-w-lg mx-auto">
+                <div class="glass-pill px-3.5 py-2.5 rounded-xl">
+                    <div class="font-semibold text-amber-200 mb-0.5">Tap / Space / Up</div>
+                    <div>Leap onto rooftops &amp; sky</div>
+                </div>
+                <div class="glass-pill px-3.5 py-2.5 rounded-xl">
+                    <div class="font-semibold text-amber-200 mb-0.5">Hold in Mid-Air</div>
+                    <div>Graceful Ribbon Backflip</div>
+                </div>
+                <div class="glass-pill px-3.5 py-2.5 rounded-xl">
+                    <div class="font-semibold text-amber-200 mb-0.5">Rooftops &amp; Lines</div>
+                    <div>Grind for Sparks &amp; Speed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crash / Soft Restart Modal (Only shown when Zen Mode is OFF) -->
+    <div id="crashOverlay" class="fixed inset-0 z-30 hidden items-center justify-center px-4 text-center bg-[#080912]/70 backdrop-blur-sm transition-opacity duration-500">
+        <div class="glass-pill p-6 sm:p-8 rounded-3xl max-w-md w-full border-amber-300/30">
+            <div class="text-xs uppercase tracking-[0.25em] text-amber-300/70 mb-1">A Gentle Tumble</div>
+            <h2 class="font-cinzel text-2xl sm:text-3xl font-bold text-amber-100 lantern-glow-text mb-4">Rest Beneath the Lanterns</h2>
+            <p class="text-xs sm:text-sm text-amber-100/75 mb-6">
+                Even the wind pauses among the mountain peaks. Take a breath and glide again whenever you are ready.
+            </p>
+            <div class="grid grid-cols-3 gap-2 mb-6 bg-black/25 p-3 rounded-2xl border border-amber-200/10">
+                <div>
+                    <div class="text-[10px] uppercase text-amber-200/60">Score</div>
+                    <div id="finalScore" class="font-cinzel text-base sm:text-lg font-bold text-amber-100">0</div>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase text-amber-200/60">Distance</div>
+                    <div id="finalDistance" class="font-cinzel text-base sm:text-lg font-bold text-amber-100">0 m</div>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase text-amber-200/60">Best</div>
+                    <div id="bestScore" class="font-cinzel text-base sm:text-lg font-bold text-amber-300">0</div>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="restartBtn" type="button" class="glass-pill px-6 py-3 rounded-full font-cinzel text-sm font-semibold tracking-wider text-amber-100 border-amber-300/50 hover:bg-amber-400/20 cursor-pointer flex-1">
+                    GLIDE AGAIN
+                </button>
+                <button id="enableZenOnCrashBtn" type="button" class="glass-pill px-5 py-3 rounded-full text-xs font-medium text-emerald-200 border-emerald-400/30 hover:bg-emerald-500/20 cursor-pointer">
+                    Switch to Zen Mode
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subtle Bottom Controls Hint -->
+    <div id="bottomHint" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none text-[11px] sm:text-xs text-amber-100/50 tracking-wider text-center px-4">
+        Hold <span class="text-amber-200/80 font-medium">SPACE / UP / TOUCH</span> to Jump &amp; Backflip • Grind Pagoda Roofs &amp; Lantern Lines
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. STUDIO-GRADE SOOTHING HARMONIC SOUNDTRACK ENGINE (WEB AUDIO API)
+         * Composed Felt Piano / Rhodes Chords, Structured Guzheng/Harp Arpeggios,
+         * Soulful Bamboo Flute (Xiao/Dizi) Lead Melody, and Lush Convolver Reverb
+         * ============================================================================
+         */
+        class CozyAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = false;
+                this.isPlaying = false;
+                this.volume = 0.75;
+                this.masterGain = null;
+                this.reverbNode = null;
+                this.delayNode = null;
+                this.windGain = null;
+
+                // 3 Selectable Musical Moods
+                this.moods = [
+                    {
+                        name: 'Liyue Lullaby',
+                        tempoMs: 375, // 16th/8th step duration (calm, flowing)
+                        fluteChance: 0.85,
+                        arpStyle: 'flowing',
+                        filterCutoff: 1950
+                    },
+                    {
+                        name: 'Starlit Harbor',
+                        tempoMs: 420, // Slower, deeply atmospheric night music box & harp
+                        fluteChance: 0.65,
+                        arpStyle: 'dreamy',
+                        filterCutoff: 1500
+                    },
+                    {
+                        name: 'Cozy Lo-Fi Breeze',
+                        tempoMs: 330, // Warm Rhodes & gentle rhythmic pulse
+                        fluteChance: 0.5,
+                        arpStyle: 'lofi',
+                        filterCutoff: 1200
+                    }
+                ];
+                this.moodIndex = 0;
+
+                // Lush 4-Chord Emotional Progression in C Major / A Minor (Fmaj9 -> Em7 -> Dm9 -> Cmaj9)
+                this.progression = [
+                    {
+                        name: 'Fmaj9',
+                        bass: 87.31, // F2
+                        pianoVoicing: [174.61, 220.00, 261.63, 329.63, 392.00], // F3, A3, C4, E4, G4
+                        arpNotes: [261.63, 329.63, 392.00, 440.00, 523.25, 659.25, 783.99, 880.00],
+                        flutePhrase: [659.25, 587.33, 523.25, 440.00] // E5 -> D5 -> C5 -> A4
+                    },
+                    {
+                        name: 'Em7',
+                        bass: 82.41, // E2
+                        pianoVoicing: [164.81, 196.00, 246.94, 293.66, 392.00], // E3, G3, B3, D4, G4
+                        arpNotes: [246.94, 293.66, 392.00, 493.88, 587.33, 659.25, 783.99, 987.77],
+                        flutePhrase: [587.33, 659.25, 783.99, 659.25] // D5 -> E5 -> G5 -> E5
+                    },
+                    {
+                        name: 'Dm9',
+                        bass: 73.42, // D2
+                        pianoVoicing: [146.83, 220.00, 261.63, 329.63, 349.23], // D3, A3, C4, E4, F4
+                        arpNotes: [220.00, 261.63, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25],
+                        flutePhrase: [523.25, 440.00, 392.00, 440.00] // C5 -> A4 -> G4 -> A4
+                    },
+                    {
+                        name: 'Cmaj9',
+                        bass: 65.41, // C2
+                        pianoVoicing: [130.81, 196.00, 246.94, 293.66, 329.63], // C3, G3, B3, D4, E4
+                        arpNotes: [261.63, 293.66, 329.63, 392.00, 523.25, 587.33, 659.25, 783.99],
+                        flutePhrase: [523.25, 587.33, 659.25, 523.25] // C5 -> D5 -> E5 -> C5
+                    }
+                ];
+
+                // Ordered melodic arpeggio patterns (indices into chord.arpNotes)
+                this.arpPatterns = {
+                    flowing: [0, 1, 2, 4, 3, 2, 5, 4, 2, 3, 5, 6, 7, 5, 4, 2],
+                    dreamy:  [0, 2, 4, 5, 7, 5, 4, 2, 1, 3, 5, 6, 4, 3, 2, 0],
+                    lofi:    [0, 2, 3, 5, 4, 2, 1, 3, 0, 4, 5, 3, 2, 4, 1, 0]
+                };
+
+                this.chordIdx = 0;
+                this.stepIdx = 0;
+                this.loopTimeout = null;
+            }
+
+            init() {
+                if (this.ctx) {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    return;
+                }
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+
+                this.ctx = new AudioCtx();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = this.isMuted ? 0 : this.volume * 0.55;
+
+                // 1. Create Lush Algorithmic Hall Convolver Reverb
+                this.reverbNode = this.createLushReverb(3.4, 2.4);
+                const reverbGain = this.ctx.createGain();
+                reverbGain.gain.value = 0.52;
+
+                // 2. Warm Stereo Ping-Pong Style Echo Delay
+                this.delayNode = this.ctx.createDelay(2.0);
+                this.delayNode.delayTime.value = 0.42;
+                const delayFeedback = this.ctx.createGain();
+                delayFeedback.gain.value = 0.34;
+                const delayFilter = this.ctx.createBiquadFilter();
+                delayFilter.type = 'lowpass';
+                delayFilter.frequency.value = 1450;
+
+                this.delayNode.connect(delayFilter);
+                delayFilter.connect(delayFeedback);
+                delayFeedback.connect(this.delayNode);
+                delayFilter.connect(this.masterGain);
+
+                this.reverbNode.connect(reverbGain);
+                reverbGain.connect(this.masterGain);
+
+                // Warm Master Lowpass Filter so nothing ever sounds piercing
+                this.masterFilter = this.ctx.createBiquadFilter();
+                this.masterFilter.type = 'lowpass';
+                this.masterFilter.frequency.value = 3800;
+
+                this.masterGain.connect(this.masterFilter);
+                this.masterFilter.connect(this.ctx.destination);
+
+                // Start soft ambient night wind bed
+                this.startAmbientBreeze();
+                this.startComposedSequencer();
+            }
+
+            createLushReverb(duration, decay) {
+                const sampleRate = this.ctx.sampleRate;
+                const length = sampleRate * duration;
+                const impulse = this.ctx.createBuffer(2, length, sampleRate);
+                for (let ch = 0; ch < 2; ch++) {
+                    const data = impulse.getChannelData(ch);
+                    for (let i = 0; i < length; i++) {
+                        const env = Math.pow(1 - i / length, decay);
+                        // Smooth early reflections + velvet tail
+                        data[i] = (Math.random() * 2 - 1) * env * 0.45;
+                    }
+                }
+                const convolver = this.ctx.createConvolver();
+                convolver.buffer = impulse;
+                return convolver;
+            }
+
+            startAmbientBreeze() {
+                if (!this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * 4;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    // Pink/Brownian soft noise
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 0.15;
+                }
+
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const bandpass = this.ctx.createBiquadFilter();
+                bandpass.type = 'bandpass';
+                bandpass.frequency.value = 340;
+                bandpass.Q.value = 1.2;
+
+                this.windGain = this.ctx.createGain();
+                this.windGain.gain.value = 0.06;
+
+                whiteNoise.connect(bandpass);
+                bandpass.connect(this.windGain);
+                this.windGain.connect(this.masterGain);
+                whiteNoise.start(0);
+            }
+
+            setVolume(val) {
+                this.volume = Math.max(0, Math.min(1, val));
+                if (this.masterGain && this.ctx && !this.isMuted) {
+                    this.masterGain.gain.setTargetAtTime(this.volume * 0.55, this.ctx.currentTime, 0.08);
+                }
+            }
+
+            toggleMute() {
+                this.init();
+                this.isMuted = !this.isMuted;
+                if (this.masterGain && this.ctx) {
+                    this.masterGain.gain.setTargetAtTime(
+                        this.isMuted ? 0 : this.volume * 0.55,
+                        this.ctx.currentTime,
+                        0.15
+                    );
+                }
+                return this.isMuted;
+            }
+
+            cycleMood() {
+                this.init();
+                this.moodIndex = (this.moodIndex + 1) % this.moods.length;
+                return this.moods[this.moodIndex].name;
+            }
+
+            /**
+             * Instrument 1: Warm Felt Piano & Rhodes Pad Swell
+             */
+            playFeltPianoChord(chord, duration = 6.2) {
+                if (!this.ctx || this.isMuted) return;
+                const now = this.ctx.currentTime;
+                const mood = this.moods[this.moodIndex];
+
+                // Deep warm sub-bass foundation
+                const bassOsc = this.ctx.createOscillator();
+                const bassEnv = this.ctx.createGain();
+                bassOsc.type = 'sine';
+                bassOsc.frequency.setValueAtTime(chord.bass, now);
+                bassEnv.gain.setValueAtTime(0.001, now);
+                bassEnv.gain.linearRampToValueAtTime(0.16, now + 0.35);
+                bassEnv.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                bassOsc.connect(bassEnv);
+                bassEnv.connect(this.masterGain);
+                bassEnv.connect(this.reverbNode);
+                bassOsc.start(now);
+                bassOsc.stop(now + duration);
+
+                // Strummed Felt Piano / Rhodes voicing
+                chord.pianoVoicing.forEach((freq, idx) => {
+                    const noteStart = now + idx * 0.065; // Gentle human roll
+                    const osc1 = this.ctx.createOscillator();
+                    const osc2 = this.ctx.createOscillator();
+                    const filter = this.ctx.createBiquadFilter();
+                    const env = this.ctx.createGain();
+
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(freq, noteStart);
+
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(freq * 1.0015, noteStart); // Warm chorus detune
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(mood.filterCutoff * 0.65, noteStart);
+                    filter.frequency.exponentialRampToValueAtTime(320, noteStart + duration * 0.85);
+
+                    const osc2Mix = this.ctx.createGain();
+                    osc2Mix.gain.value = 0.25;
+
+                    const peak = 0.065;
+                    env.gain.setValueAtTime(0.0005, noteStart);
+                    env.gain.linearRampToValueAtTime(peak, noteStart + 0.12);
+                    env.gain.exponentialRampToValueAtTime(0.0006, noteStart + duration);
+
+                    osc1.connect(filter);
+                    osc2.connect(osc2Mix);
+                    osc2Mix.connect(filter);
+                    filter.connect(env);
+
+                    env.connect(this.masterGain);
+                    env.connect(this.reverbNode);
+
+                    osc1.start(noteStart);
+                    osc2.start(noteStart);
+                    osc1.stop(noteStart + duration);
+                    osc2.stop(noteStart + duration);
+                });
+            }
+
+            /**
+             * Instrument 2: Warm Resonant Guzheng / Concert Harp Arpeggio Note
+             */
+            playWarmHarpNote(freq, velocity = 0.11, duration = 2.8) {
+                if (!this.ctx || this.isMuted) return;
+                const now = this.ctx.currentTime;
+                const mood = this.moods[this.moodIndex];
+
+                const osc = this.ctx.createOscillator();
+                const subOsc = this.ctx.createOscillator();
+                const filter = this.ctx.createBiquadFilter();
+                const env = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+
+                // Warm fundamental sine body so it sounds woody and full
+                subOsc.type = 'sine';
+                subOsc.frequency.setValueAtTime(freq, now);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(mood.filterCutoff, now);
+                filter.frequency.exponentialRampToValueAtTime(Math.max(280, freq * 0.85), now + duration * 0.75);
+
+                env.gain.setValueAtTime(0.0008, now);
+                env.gain.linearRampToValueAtTime(velocity, now + 0.032); // Soft felt attack
+                env.gain.exponentialRampToValueAtTime(0.0006, now + duration);
+
+                osc.connect(filter);
+                subOsc.connect(filter);
+                filter.connect(env);
+
+                env.connect(this.masterGain);
+                env.connect(this.delayNode);
+                env.connect(this.reverbNode);
+
+                osc.start(now);
+                subOsc.start(now);
+                osc.stop(now + duration);
+                subOsc.stop(now + duration);
+            }
+
+            /**
+             * Instrument 3: Breathable Bamboo Flute (Xiao / Dizi) Expressive Lead Note
+             */
+            playBambooFluteNote(freq, duration = 1.65, volume = 0.085) {
+                if (!this.ctx || this.isMuted) return;
+                const now = this.ctx.currentTime;
+
+                const osc = this.ctx.createOscillator();
+                const oscHarmonic = this.ctx.createOscillator();
+                const vibratoOsc = this.ctx.createOscillator();
+                const vibratoGain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
+                const env = this.ctx.createGain();
+
+                osc.type = 'sine';
+                // Subtle portamento slide into the note
+                osc.frequency.setValueAtTime(freq * 0.985, now);
+                osc.frequency.exponentialRampToValueAtTime(freq, now + 0.14);
+
+                oscHarmonic.type = 'triangle';
+                oscHarmonic.frequency.setValueAtTime(freq, now);
+                const harmMix = this.ctx.createGain();
+                harmMix.gain.value = 0.22;
+
+                // Expressive delayed vibrato (4.8 Hz)
+                vibratoOsc.frequency.setValueAtTime(4.8, now);
+                vibratoGain.gain.setValueAtTime(0.1, now);
+                vibratoGain.gain.linearRampToValueAtTime(3.2, now + duration * 0.55);
+                vibratoOsc.connect(vibratoGain);
+                vibratoGain.connect(osc.frequency);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1650, now);
+
+                // Gentle breathing swell envelope
+                env.gain.setValueAtTime(0.0005, now);
+                env.gain.linearRampToValueAtTime(volume, now + 0.26);
+                env.gain.setValueAtTime(volume * 0.9, now + duration * 0.65);
+                env.gain.exponentialRampToValueAtTime(0.0005, now + duration);
+
+                osc.connect(filter);
+                oscHarmonic.connect(harmMix);
+                harmMix.connect(filter);
+                filter.connect(env);
+
+                env.connect(this.masterGain);
+                env.connect(this.reverbNode);
+                env.connect(this.delayNode);
+
+                osc.start(now);
+                oscHarmonic.start(now);
+                vibratoOsc.start(now);
+                osc.stop(now + duration);
+                oscHarmonic.stop(now + duration);
+                vibratoOsc.stop(now + duration);
+            }
+
+            /**
+             * Main Composed Sequencer Loop (16 steps per chord bar)
+             */
+            startComposedSequencer() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+
+                const tick = () => {
+                    if (this.ctx && !this.isMuted && this.ctx.state === 'running') {
+                        const mood = this.moods[this.moodIndex];
+                        const chord = this.progression[this.chordIdx];
+                        const pattern = this.arpPatterns[mood.arpStyle];
+
+                        // Step 0 of 16: Trigger lush Felt Piano Chord + Bass
+                        if (this.stepIdx === 0) {
+                            this.playFeltPianoChord(chord, (mood.tempoMs * 16) / 1000 + 1.2);
+                        }
+
+                        // Step 8 of 16: Gentle mid-bar bass & fifth reinforcement
+                        if (this.stepIdx === 8 && mood.arpStyle === 'lofi') {
+                            this.playWarmHarpNote(chord.bass * 2, 0.08, 2.2);
+                        }
+
+                        // Play structured melodic Guzheng/Harp arpeggio note
+                        const arpNoteIdx = pattern[this.stepIdx % pattern.length];
+                        const arpFreq = chord.arpNotes[arpNoteIdx];
+                        // Accent beats 0, 4, 8, 12 slightly for gentle musical flow
+                        const isDownbeat = (this.stepIdx % 4 === 0);
+                        const vel = isDownbeat ? 0.095 : 0.062;
+                        this.playWarmHarpNote(arpFreq, vel, 2.6);
+
+                        // Expressive Bamboo Flute Lead Melody on steps 2, 6, 10, 14
+                        if (this.stepIdx % 4 === 2 && Math.random() < mood.fluteChance) {
+                            const phraseStep = Math.floor(this.stepIdx / 4);
+                            const fluteFreq = chord.flutePhrase[phraseStep % chord.flutePhrase.length];
+                            this.playBambooFluteNote(fluteFreq, (mood.tempoMs * 3.8) / 1000, 0.078);
+                        }
+
+                        // Advance sequencer step & chord progression
+                        this.stepIdx++;
+                        if (this.stepIdx >= 16) {
+                            this.stepIdx = 0;
+                            this.chordIdx = (this.chordIdx + 1) % this.progression.length;
+                        }
+                    }
+
+                    const currentTempo = this.moods[this.moodIndex].tempoMs;
+                    this.loopTimeout = setTimeout(tick, currentTempo);
+                };
+
+                tick();
+            }
+
+            // Harmonious Sound Effects synced to the active chord!
+            playJumpSfx() {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                this.playWarmHarpNote(chord.arpNotes[2], 0.08, 1.2);
+                setTimeout(() => this.playWarmHarpNote(chord.arpNotes[4], 0.06, 1.4), 70);
+            }
+
+            playCollectOrbSfx(combo = 1) {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                const idx = Math.min(3 + (combo % 4), chord.arpNotes.length - 2);
+                this.playWarmHarpNote(chord.arpNotes[idx], 0.11, 1.9);
+                setTimeout(() => this.playWarmHarpNote(chord.arpNotes[idx + 1], 0.09, 2.2), 85);
+            }
+
+            playLandingBoostSfx() {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                // Cascading harp glissando across the active chord
+                [2, 3, 4, 5, 6, 7].forEach((noteIdx, i) => {
+                    setTimeout(() => {
+                        this.playWarmHarpNote(chord.arpNotes[noteIdx], 0.075, 2.3);
+                    }, i * 55);
+                });
+            }
+
+            playBirdScatterSfx() {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                // Delicate high flute/chime flutter
+                this.playBambooFluteNote(chord.arpNotes[6], 0.55, 0.055);
+                setTimeout(() => this.playBambooFluteNote(chord.arpNotes[7], 0.65, 0.045), 110);
+            }
+
+            playGateChimeSfx() {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                this.playWarmHarpNote(chord.arpNotes[5], 0.10, 2.5);
+                setTimeout(() => this.playWarmHarpNote(chord.arpNotes[7], 0.08, 2.8), 120);
+            }
+
+            playFireworkSfx() {
+                if (!this.ctx || this.isMuted) return;
+                const chord = this.progression[this.chordIdx];
+                this.playWarmHarpNote(chord.arpNotes[5], 0.09, 2.0);
+                setTimeout(() => this.playWarmHarpNote(chord.arpNotes[7], 0.08, 2.4), 100);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 2. PROCEDURAL TERRAIN, BUILDINGS, BIRDS & LANTERN RITE WORLD ENGINE
+         * ============================================================================
+         */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = new CozyAudioEngine();
+
+        // Responsive viewport state
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game state variables
+        const GAME_STATE = {
+            TITLE: 'TITLE',
+            PLAYING: 'PLAYING',
+            CRASHED: 'CRASHED'
+        };
+
+        let currentState = GAME_STATE.TITLE;
+        let zenMode = true; // Cozy default: Zen Mode ON
+        let score = 0;
+        let highScore = 0;
+        let startX = 200;
+        let distanceMeters = 0;
+        let lanternsCollected = 0;
+        let comboMultiplier = 1;
+        let comboTimer = 0;
+
+        // Input handling (Keyboard + Mouse + Touch)
+        let isHoldingAction = false;
+        let jumpPressedThisFrame = false;
+
+        function handlePressStart(e) {
+            if (e && e.target && (e.target.closest('button') || e.target.closest('input'))) return;
+            audio.init();
+
+            if (currentState === GAME_STATE.TITLE) {
+                startGame();
+                return;
+            }
+            if (currentState === GAME_STATE.CRASHED) {
+                resetPlayerRun();
+                return;
+            }
+            if (!isHoldingAction) {
+                jumpPressedThisFrame = true;
+            }
+            isHoldingAction = true;
+        }
+
+        function handlePressEnd() {
+            isHoldingAction = false;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                handlePressStart(e);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                handlePressEnd();
+            }
+        });
+
+        canvas.addEventListener('mousedown', handlePressStart);
+        window.addEventListener('mouseup', handlePressEnd);
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.target && (e.target.closest('button') || e.target.closest('input'))) return;
+            e.preventDefault();
+            handlePressStart(e);
+        }, { passive: false });
+        window.addEventListener('touchend', handlePressEnd);
+
+        /**
+         * Smooth multi-octave sine wave terrain height & slope derivative
+         */
+        function getTerrainY(worldX) {
+            const baseSlope = worldX * 0.22;
+            const rollingHill = Math.sin(worldX * 0.0016) * 145;
+            const mediumWave = Math.sin(worldX * 0.0041 + 1.4) * 58;
+            const gentleDetail = Math.cos(worldX * 0.0085) * 18;
+            return 350 + baseSlope + rollingHill + mediumWave + gentleDetail;
+        }
+
+        function getTerrainSlopeAngle(worldX) {
+            const delta = 2.0;
+            const dy = getTerrainY(worldX + delta) - getTerrainY(worldX - delta);
+            return Math.atan2(dy, delta * 2);
+        }
+
+        /**
+         * Player Object with Grinding & Ribbon Scarf Trail Physics
+         */
+        const player = {
+            x: 200,
+            y: getTerrainY(200),
+            vx: 7.2,
+            vy: 0,
+            speed: 7.5,
+            baseMinSpeed: 6.6,
+            maxSpeed: 16.8,
+            angle: 0,
+            angularVel: 0,
+            grounded: true,
+            grinding: false,
+            activeGrindSurface: null,
+            grindTicks: 0,
+            flipping: false,
+            flipAccumulator: 0,
+            flipsCompletedInAir: 0,
+            boostTimer: 0,
+            scarfNodes: []
+        };
+
+        function initScarf() {
+            player.scarfNodes = [];
+            for (let i = 0; i < 26; i++) {
+                player.scarfNodes.push({
+                    x: player.x - i * 6,
+                    y: player.y - 14
+                });
+            }
+        }
+        initScarf();
+
+        // Camera state
+        const camera = {
+            x: 0,
+            y: 0,
+            zoom: 1,
+            targetZoom: 1
+        };
+
+        /**
+         * Ambient & Interactive Entities
+         */
+        const stars = [];
+        const bgLanterns = [];
+        const skyFlocks = [];
+        const collectibles = [];
+        const structures = [];     // Pagodas, Pavilions, Lantern Bunting Lines, Paifang Gates
+        const grindSurfaces = [];  // Rooftops & Lantern Lines the player can grind on
+        const floraItems = [];     // Golden Ginkgo trees & Bamboo groves
+        const perchedBirds = [];   // Birds sitting on roofs/lines that scatter when player nears
+        const particles = [];
+        const fallingLeaves = [];
+        const fireworks = [];
+
+        let lastSpawnedChunkX = 250;
+        let nextCheckpointMeters = 250;
+
+        // Populate twinkling stars
+        for (let i = 0; i < 120; i++) {
+            stars.push({
+                x: Math.random(),
+                y: Math.random() * 0.65,
+                r: 0.6 + Math.random() * 1.7,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Populate multi-layered floating Xiao Lanterns
+        for (let i = 0; i < 85; i++) {
+            bgLanterns.push(createSkyLantern(true));
+        }
+
+        function createSkyLantern(randomY = false) {
+            const depth = 0.15 + Math.random() * 0.85;
+            return {
+                x: Math.random() * width,
+                y: randomY ? Math.random() * height * 0.92 : height + 30 + Math.random() * 60,
+                depth: depth,
+                size: 4 + depth * 12,
+                riseSpeed: 0.18 + depth * 0.45,
+                swayAmp: 0.2 + Math.random() * 0.45,
+                swayFreq: 0.01 + Math.random() * 0.02,
+                phase: Math.random() * Math.PI * 2
+            };
+        }
+
+        // Populate Distant Ambient Crane Flocks in V-Formations
+        for (let f = 0; f < 4; f++) {
+            skyFlocks.push(createSkyFlock(Math.random() * width));
+        }
+
+        function createSkyFlock(startXPos) {
+            const leaderY = height * (0.12 + Math.random() * 0.32);
+            const scale = 0.45 + Math.random() * 0.55;
+            const speed = 0.6 + scale * 0.9;
+            const birdCount = 5 + Math.floor(Math.random() * 4);
+            const members = [];
+
+            for (let i = 0; i < birdCount; i++) {
+                const side = i % 2 === 0 ? 1 : -1;
+                const rank = Math.ceil(i / 2);
+                members.push({
+                    offsetX: -rank * 18 * scale,
+                    offsetY: side * rank * 10 * scale,
+                    flapPhase: i * 0.65
+                });
+            }
+            return {
+                x: startXPos,
+                y: leaderY,
+                scale,
+                speed,
+                members,
+                wavePhase: Math.random() * Math.PI * 2
+            };
+        }
+
+        /**
+         * Helper to evaluate Y position on a grindable surface at worldX
+         */
+        function getGrindSurfaceY(surface, worldX) {
+            const t = Math.max(0, Math.min(1, (worldX - surface.x1) / (surface.x2 - surface.x1)));
+            const linearY = surface.y1 + t * (surface.y2 - surface.y1);
+            const sagOffset = Math.sin(t * Math.PI) * (surface.sag || 0);
+            return linearY + sagOffset;
+        }
+
+        function getGrindSurfaceAngle(surface, worldX) {
+            const d = 4;
+            const yA = getGrindSurfaceY(surface, worldX - d);
+            const yB = getGrindSurfaceY(surface, worldX + d);
+            return Math.atan2(yB - yA, d * 2);
+        }
+
+        /**
+         * Spawn World Chunks: Pagoda Pavilions, Lantern Grind Lines, Archways, Flora, Birds & Orbs
+         */
+        function spawnWorldUpTo(targetWorldX) {
+            while (lastSpawnedChunkX < targetWorldX) {
+                const chunkSpacing = 440 + Math.random() * 240;
+                lastSpawnedChunkX += chunkSpacing;
+                const cx = lastSpawnedChunkX;
+
+                // 1. Spawn Lush Flora (Golden Ginkgo Trees & Swaying Bamboo Groves)
+                const treeCount = 2 + Math.floor(Math.random() * 3);
+                for (let t = 0; t < treeCount; t++) {
+                    const tx = cx - 180 + t * 130 + (Math.random() - 0.5) * 50;
+                    floraItems.push({
+                        x: tx,
+                        y: getTerrainY(tx),
+                        type: Math.random() > 0.42 ? 'ginkgo' : 'bamboo',
+                        scale: 0.75 + Math.random() * 0.55,
+                        swayPhase: Math.random() * Math.PI * 2,
+                        rustled: false
+                    });
+                }
+
+                // 2. Choose an Architectural Feature for this Valley Segment
+                const roll = Math.random();
+
+                if (roll < 0.38) {
+                    // FEATURE A: Liyue Wooden Pavilion + Connected Festive Lantern Bunting Line (Long Grind!)
+                    const pavWidth = 175;
+                    const x1 = cx;
+                    const x2 = cx + pavWidth;
+                    const y1 = getTerrainY(x1) - 64;
+                    const y2 = getTerrainY(x2) - 64;
+
+                    const roofSurface = {
+                        x1: x1 - 14,
+                        y1: y1,
+                        x2: x2 + 14,
+                        y2: y2,
+                        sag: -6, //Slightly upturned traditional roof crown
+                        type: 'rooftop'
+                    };
+                    grindSurfaces.push(roofSurface);
+
+                    structures.push({
+                        type: 'pavilion',
+                        x1, x2,
+                        groundY1: getTerrainY(x1),
+                        groundY2: getTerrainY(x2),
+                        roofY1: y1,
+                        roofY2: y2
+                    });
+
+                    // Spawn perched birds on the pavilion roof
+                    for (let b = 0; b < 4; b++) {
+                        const bx = x1 + 25 + b * 36;
+                        perchedBirds.push({
+                            x: bx,
+                            y: getGrindSurfaceY(roofSurface, bx) - 3,
+                            vx: 0,
+                            vy: 0,
+                            state: 'perched',
+                            flapPhase: Math.random() * Math.PI * 2,
+                            color: b % 2 === 0 ? '#fff3d1' : '#ffd166'
+                        });
+                    }
+
+                    // Stretch a festive lantern bunting line from pavilion roof to a downstream wooden pole
+                    const poleX = x2 + 230;
+                    const poleGroundY = getTerrainY(poleX);
+                    const poleTopY = poleGroundY - 68;
+
+                    const buntingSurface = {
+                        x1: x2 + 8,
+                        y1: y2 + 2,
+                        x2: poleX,
+                        y2: poleTopY,
+                        sag: 22,
+                        type: 'bunting'
+                    };
+                    grindSurfaces.push(buntingSurface);
+
+                    structures.push({
+                        type: 'lantern_line',
+                        x1: x2 + 8,
+                        y1: y2 + 2,
+                        x2: poleX,
+                        y2: poleTopY,
+                        poleGroundY,
+                        sag: 22
+                    });
+
+                    // Place collectibles along the roof & lantern line
+                    for (let i = 0; i < 6; i++) {
+                        const ox = x1 + 20 + i * 62;
+                        const surf = ox <= x2 + 10 ? roofSurface : buntingSurface;
+                        collectibles.push({
+                            x: ox,
+                            y: getGrindSurfaceY(surf, ox) - 24,
+                            radius: 13,
+                            collected: false,
+                            pulsePhase: i * 0.5,
+                            isJade: i === 3
+                        });
+                    }
+
+                    lastSpawnedChunkX += 220; // Account for extended bunting line
+
+                } else if (roll < 0.72) {
+                    // FEATURE B: Long Festive Lantern Suspension Line Between Two Poles
+                    const span = 270;
+                    const x1 = cx;
+                    const x2 = cx + span;
+                    const g1 = getTerrainY(x1);
+                    const g2 = getTerrainY(x2);
+                    const y1 = g1 - 68;
+                    const y2 = g2 - 68;
+
+                    const lineSurface = {
+                        x1, y1, x2, y2,
+                        sag: 26,
+                        type: 'bunting'
+                    };
+                    grindSurfaces.push(lineSurface);
+
+                    structures.push({
+                        type: 'dual_pole_line',
+                        x1, y1, g1,
+                        x2, y2, g2,
+                        sag: 26
+                    });
+
+                    // Perched birds sitting on the lantern rope
+                    for (let b = 0; b < 5; b++) {
+                        const bx = x1 + 45 + b * 45;
+                        perchedBirds.push({
+                            x: bx,
+                            y: getGrindSurfaceY(lineSurface, bx) - 2,
+                            vx: 0,
+                            vy: 0,
+                            state: 'perched',
+                            flapPhase: Math.random() * Math.PI * 2,
+                            color: '#ffe8a3'
+                        });
+                    }
+
+                    // Orbs following the rope curve
+                    for (let i = 0; i < 5; i++) {
+                        const ox = x1 + 30 + i * 52;
+                        collectibles.push({
+                            x: ox,
+                            y: getGrindSurfaceY(lineSurface, ox) - 22,
+                            radius: 13,
+                            collected: false,
+                            pulsePhase: i * 0.6,
+                            isJade: i === 2
+                        });
+                    }
+
+                } else {
+                    // FEATURE C: Ancient Paifang / Torii Gate Archway (Lights up when glided through!) + High Jump Arc
+                    const gateX = cx;
+                    const gateY = getTerrainY(gateX);
+                    structures.push({
+                        type: 'archway',
+                        x: gateX,
+                        y: gateY,
+                        lit: false,
+                        litGlow: 0
+                    });
+
+                    // Perched birds atop the archway beam
+                    for (let b = -1; b <= 1; b++) {
+                        perchedBirds.push({
+                            x: gateX + b * 18,
+                            y: gateY - 108,
+                            vx: 0,
+                            vy: 0,
+                            state: 'perched',
+                            flapPhase: Math.random() * Math.PI * 2,
+                            color: '#ffd166'
+                        });
+                    }
+
+                    // Parabolic arc of Jade Orbs soaring after the gate
+                    const count = 6;
+                    for (let i = 0; i < count; i++) {
+                        const ox = gateX + 40 + i * 48;
+                        const norm = (i / (count - 1)) * 2 - 1;
+                        const arcOffset = -45 - (1 - norm * norm) * 115;
+                        collectibles.push({
+                            x: ox,
+                            y: getTerrainY(ox) + arcOffset,
+                            radius: 13,
+                            collected: false,
+                            pulsePhase: i * 0.5,
+                            isJade: i === 2 || i === 3
+                        });
+                    }
+                }
+            }
+        }
+
+        /**
+         * Spawn Festive Fireworks in the Sky
+         */
+        function launchFirework(screenX, screenY) {
+            const fx = screenX || (width * (0.25 + Math.random() * 0.65));
+            const fy = screenY || (height * (0.14 + Math.random() * 0.28));
+            const palettes = [
+                ['#ffd166', '#ffb703', '#fb8500', '#fff3b0'],
+                ['#72efdd', '#64dfdf', '#ffd166', '#ffffff'],
+                ['#ff758f', '#ffb3c1', '#ffd166', '#ffe5ec']
+            ];
+            const palette = palettes[Math.floor(Math.random() * palettes.length)];
+            const sparks = [];
+            const sparkCount = 42;
+
+            for (let i = 0; i < sparkCount; i++) {
+                const angle = (Math.PI * 2 * i) / sparkCount + (Math.random() - 0.5) * 0.12;
+                const speed = 1.2 + Math.random() * 3.8;
+                sparks.push({
+                    x: fx,
+                    y: fy,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: 0.011 + Math.random() * 0.01,
+                    color: palette[Math.floor(Math.random() * palette.length)],
+                    size: 1.8 + Math.random() * 2.2
+                });
+            }
+            fireworks.push({ sparks });
+            audio.playFireworkSfx();
+        }
+
+        function spawnLanternBurst(worldX, worldY, count = 6) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: worldX + (Math.random() - 0.5) * 35,
+                    y: worldY + (Math.random() - 0.5) * 20,
+                    vx: (Math.random() - 0.5) * 2.2,
+                    vy: -1.5 - Math.random() * 2.5,
+                    size: 3 + Math.random() * 4.5,
+                    alpha: 1,
+                    decay: 0.012 + Math.random() * 0.012,
+                    color: Math.random() > 0.3 ? '#ffbe55' : '#64dfdf'
+                });
+            }
+        }
+
+        function spawnFallingGinkgoLeaves(treeX, treeY, count = 8) {
+            for (let i = 0; i < count; i++) {
+                fallingLeaves.push({
+                    x: treeX + (Math.random() - 0.5) * 55,
+                    y: treeY - 35 - Math.random() * 45,
+                    vx: 1.2 + Math.random() * 2.4,
+                    vy: 0.4 + Math.random() * 1.1,
+                    angle: Math.random() * Math.PI * 2,
+                    spin: (Math.random() - 0.5) * 0.08,
+                    size: 3.5 + Math.random() * 3,
+                    alpha: 0.95,
+                    color: Math.random() > 0.3 ? '#ffd166' : '#ffb703'
+                });
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 3. UI & HUD FEEDBACK HELPERS
+         * ============================================================================
+         */
+        const hudScoreEl = document.getElementById('hudScore');
+        const hudDistanceEl = document.getElementById('hudDistance');
+        const hudLanternsEl = document.getElementById('hudLanterns');
+        const comboPillEl = document.getElementById('comboPill');
+        const comboTextEl = document.getElementById('comboText');
+        const floatingFeedbackEl = document.getElementById('floatingFeedback');
+        const feedbackTitleEl = document.getElementById('feedbackTitle');
+        const feedbackSubEl = document.getElementById('feedbackSub');
+        let feedbackTimeout = null;
+
+        function showTrickFeedback(title, subtitle) {
+            feedbackTitleEl.textContent = title;
+            feedbackSubEl.textContent = subtitle;
+            floatingFeedbackEl.classList.remove('opacity-0', '-translate-y-2');
+            floatingFeedbackEl.classList.add('opacity-100', 'translate-y-0');
+
+            if (feedbackTimeout) clearTimeout(feedbackTimeout);
+            feedbackTimeout = setTimeout(() => {
+                floatingFeedbackEl.classList.remove('opacity-100', 'translate-y-0');
+                floatingFeedbackEl.classList.add('opacity-0', '-translate-y-2');
+            }, 1900);
+        }
+
+        function updateHUD() {
+            hudScoreEl.textContent = Math.floor(score).toLocaleString();
+            hudDistanceEl.textContent = `${distanceMeters.toLocaleString()} m`;
+            hudLanternsEl.textContent = lanternsCollected.toLocaleString();
+
+            if (comboMultiplier > 1 || player.flipsCompletedInAir > 0 || player.grinding) {
+                comboPillEl.classList.remove('opacity-0');
+                comboPillEl.classList.add('opacity-100');
+                const activeFlips = player.flipsCompletedInAir > 0 ? ` • ${player.flipsCompletedInAir} Flip!` : '';
+                const grindLabel = player.grinding ? ' • Grinding!' : '';
+                comboTextEl.textContent = `Combo x${comboMultiplier}${activeFlips}${grindLabel}`;
+            } else {
+                comboPillEl.classList.remove('opacity-100');
+                comboPillEl.classList.add('opacity-0');
+            }
+        }
+
+        // Button event bindings
+        document.getElementById('startBtn').addEventListener('click', () => {
+            audio.init();
+            startGame();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            audio.init();
+            resetPlayerRun();
+        });
+
+        document.getElementById('enableZenOnCrashBtn').addEventListener('click', () => {
+            zenMode = true;
+            syncZenButtonUI();
+            resetPlayerRun();
+        });
+
+        function syncZenButtonUI() {
+            const zenDot = document.getElementById('zenDot');
+            const zenStatus = document.getElementById('zenStatus');
+            if (zenMode) {
+                zenStatus.textContent = 'ON';
+                zenDot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
+            } else {
+                zenStatus.textContent = 'OFF';
+                zenDot.className = 'w-2 h-2 rounded-full bg-amber-400/40';
+            }
+        }
+
+        document.getElementById('zenBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            zenMode = !zenMode;
+            syncZenButtonUI();
+            showTrickFeedback(
+                zenMode ? 'ZEN MODE ENABLED' : 'CHALLENGE MODE',
+                zenMode ? 'ENDLESS RELAXATION • NO CRASHES' : 'LAND CLEANLY AFTER BACKFLIPS'
+            );
+        });
+
+        document.getElementById('fireworkBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            audio.init();
+            launchFirework();
+            launchFirework();
+        });
+
+        document.getElementById('moodBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newMood = audio.cycleMood();
+            document.getElementById('moodLabel').textContent = newMood;
+            showTrickFeedback(`SOUNDTRACK: ${newMood.toUpperCase()}`, 'HARMONIC PENTATONIC & BAMBOO FLUTE');
+        });
+
+        document.getElementById('audioBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const muted = audio.toggleMute();
+            document.getElementById('iconSoundOn').classList.toggle('hidden', muted);
+            document.getElementById('iconSoundOff').classList.toggle('hidden', !muted);
+        });
+
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            e.stopPropagation();
+            audio.init();
+            audio.setVolume(parseFloat(e.target.value) / 100);
+        });
+
+        function startGame() {
+            currentState = GAME_STATE.PLAYING;
+            const titleOverlay = document.getElementById('titleOverlay');
+            titleOverlay.classList.add('opacity-0', 'pointer-events-none');
+            launchFirework(width * 0.65, height * 0.22);
+            showTrickFeedback('THE LANTERN RITE BEGINS', 'GRIND PAGODA ROOFS & SCATTER CRANES');
+        }
+
+        function resetPlayerRun() {
+            document.getElementById('crashOverlay').classList.add('hidden');
+            document.getElementById('crashOverlay').classList.remove('flex');
+
+            score = 0;
+            lanternsCollected = 0;
+            comboMultiplier = 1;
+            distanceMeters = 0;
+            nextCheckpointMeters = 250;
+
+            player.x = 200;
+            player.y = getTerrainY(200);
+            player.speed = 7.5;
+            player.vx = 7.5;
+            player.vy = 0;
+            player.angle = getTerrainSlopeAngle(200);
+            player.grounded = true;
+            player.grinding = false;
+            player.activeGrindSurface = null;
+            player.flipAccumulator = 0;
+            player.flipsCompletedInAir = 0;
+            player.boostTimer = 0;
+
+            collectibles.length = 0;
+            structures.length = 0;
+            grindSurfaces.length = 0;
+            floraItems.length = 0;
+            perchedBirds.length = 0;
+            lastSpawnedChunkX = 350;
+            spawnWorldUpTo(2800);
+            initScarf();
+
+            currentState = GAME_STATE.PLAYING;
+            updateHUD();
+        }
+
+        /**
+         * ============================================================================
+         * 4. PHYSICS, ROOFTOP GRINDING & WILDLIFE INTERACTION LOOP
+         * ============================================================================
+         */
+        function normalizeAngle(rad) {
+            while (rad > Math.PI) rad -= Math.PI * 2;
+            while (rad < -Math.PI) rad += Math.PI * 2;
+            return rad;
+        }
+
+        function awardAirTricksOnLanding() {
+            if (player.flipsCompletedInAir > 0) {
+                const flipCount = player.flipsCompletedInAir;
+                comboMultiplier = Math.min(comboMultiplier + flipCount, 8);
+                comboTimer = 360;
+                const trickPoints = flipCount * 250 * comboMultiplier;
+                score += trickPoints;
+                player.boostTimer = 160;
+                player.speed = Math.min(player.speed + 2.8, player.maxSpeed);
+
+                audio.playLandingBoostSfx();
+                spawnLanternBurst(player.x, player.y, 12);
+                if (flipCount >= 2 || comboMultiplier >= 3) {
+                    launchFirework();
+                }
+
+                const trickName = flipCount === 1
+                    ? 'LANTERN BACKFLIP'
+                    : `${flipCount}x CELESTIAL SPIN`;
+                showTrickFeedback(
+                    trickName,
+                    `+${trickPoints.toLocaleString()} PTS • x${comboMultiplier} COMBO BOOST`
+                );
+            }
+            player.flipAccumulator = 0;
+            player.flipsCompletedInAir = 0;
+        }
+
+        function updatePhysics() {
+            const groundY = getTerrainY(player.x);
+            const groundSlope = getTerrainSlopeAngle(player.x);
+            const isTitleAutopilot = (currentState === GAME_STATE.TITLE);
+
+            if (currentState === GAME_STATE.CRASHED) {
+                return;
+            }
+
+            if (comboTimer > 0) {
+                comboTimer--;
+                if (comboTimer === 0 && player.grounded && !player.grinding) {
+                    comboMultiplier = 1;
+                }
+            }
+
+            if (player.boostTimer > 0) {
+                player.boostTimer--;
+            }
+
+            const prevY = player.y;
+
+            // CASE 1: Player is Grinding on a Pagoda Rooftop or Lantern Bunting Line!
+            if (player.grinding && player.activeGrindSurface) {
+                const surf = player.activeGrindSurface;
+                if (player.x > surf.x2 || player.x < surf.x1) {
+                    // Glide smoothly off the end of the rooftop/line
+                    player.grinding = false;
+                    player.activeGrindSurface = null;
+                    player.vy -= 2.2; // Gentle pop off the eaves
+                    comboMultiplier = Math.min(comboMultiplier + 1, 8);
+                    comboTimer = 340;
+                    const grindBonus = Math.floor(player.grindTicks * 4) * comboMultiplier;
+                    if (grindBonus > 40) {
+                        score += grindBonus;
+                        showTrickFeedback(
+                            surf.type === 'rooftop' ? 'PAGODA ROOF GRIND' : 'LANTERN LINE GRIND',
+                            `+${grindBonus.toLocaleString()} PTS • x${comboMultiplier} COMBO`
+                        );
+                    }
+                } else {
+                    player.y = getGrindSurfaceY(surf, player.x);
+                    const surfAngle = getGrindSurfaceAngle(surf, player.x);
+                    player.angle += (surfAngle - player.angle) * 0.35;
+
+                    player.speed = Math.min(Math.max(player.speed + 0.08, 10.5), player.maxSpeed);
+                    player.vx = Math.cos(surfAngle) * player.speed;
+                    player.vy = Math.sin(surfAngle) * player.speed;
+                    player.grindTicks++;
+                    player.boostTimer = Math.max(player.boostTimer, 40);
+                    comboTimer = Math.max(comboTimer, 220);
+                    score += 1.5 * comboMultiplier;
+
+                    // Emit golden rooftop grind sparks
+                    if (Math.random() < 0.75) {
+                        particles.push({
+                            x: player.x - 8,
+                            y: player.y,
+                            vx: -player.vx * 0.3 + (Math.random() - 0.5) * 2,
+                            vy: -1 - Math.random() * 2.2,
+                            size: 2 + Math.random() * 2.5,
+                            alpha: 1,
+                            decay: 0.035,
+                            color: surf.type === 'rooftop' ? '#ffd166' : '#72efdd'
+                        });
+                    }
+
+                    // Jump off the grind surface if player presses action
+                    if (!isTitleAutopilot && jumpPressedThisFrame) {
+                        player.grinding = false;
+                        player.activeGrindSurface = null;
+                        player.vy -= 10.2;
+                        player.y -= 6;
+                        player.flipAccumulator = 0;
+                        player.flipsCompletedInAir = 0;
+                        audio.playJumpSfx();
+                        spawnLanternBurst(player.x, player.y, 5);
+                    }
+                }
+            }
+            // CASE 2: Player is Gliding on the Ground Slope
+            else if (player.grounded) {
+                player.y = groundY;
+
+                const slopeAccel = Math.sin(groundSlope) * 0.19;
+                player.speed += slopeAccel;
+
+                const targetMin = player.boostTimer > 0 ? 11.4 : player.baseMinSpeed;
+                if (player.speed < targetMin) {
+                    player.speed += (targetMin - player.speed) * 0.05;
+                }
+                if (player.speed > player.maxSpeed) {
+                    player.speed = player.maxSpeed;
+                }
+
+                player.speed *= 0.997;
+                player.vx = Math.cos(groundSlope) * player.speed;
+                player.vy = Math.sin(groundSlope) * player.speed;
+                player.angle += (groundSlope - player.angle) * 0.28;
+
+                // Jump initiation
+                if (!isTitleAutopilot && (jumpPressedThisFrame || isHoldingAction)) {
+                    player.grounded = false;
+                    player.vy -= 9.8 + Math.min(player.speed * 0.16, 2.5);
+                    player.y -= 4;
+                    player.flipAccumulator = 0;
+                    player.flipsCompletedInAir = 0;
+                    audio.playJumpSfx();
+                    spawnLanternBurst(player.x, player.y, 4);
+                }
+            }
+            // CASE 3: Player is Airborne
+            else {
+                const gravity = isHoldingAction ? 0.25 : 0.30;
+                player.vy += gravity;
+                player.vx *= 0.999;
+
+                if (!isTitleAutopilot && isHoldingAction) {
+                    const spinRate = -0.11;
+                    player.angle += spinRate;
+                    player.flipAccumulator += Math.abs(spinRate);
+
+                    if (Math.random() < 0.65) {
+                        particles.push({
+                            x: player.x - Math.cos(player.angle) * 14,
+                            y: player.y - 12 - Math.sin(player.angle) * 14,
+                            vx: (Math.random() - 0.5) * 1.5,
+                            vy: (Math.random() - 0.5) * 1.5,
+                            size: 2 + Math.random() * 2.5,
+                            alpha: 0.9,
+                            decay: 0.03,
+                            color: '#ffe082'
+                        });
+                    }
+
+                    const completedNow = Math.floor((player.flipAccumulator + 0.45) / (Math.PI * 2));
+                    if (completedNow > player.flipsCompletedInAir) {
+                        player.flipsCompletedInAir = completedNow;
+                        audio.playCollectOrbSfx(completedNow + 2);
+                        spawnLanternBurst(player.x, player.y - 15, 7);
+                        updateHUD();
+                    }
+                } else {
+                    const flightAngle = Math.atan2(player.vy, player.vx) * 0.55;
+                    const diff = normalizeAngle(flightAngle - player.angle);
+                    player.angle += diff * 0.08;
+                }
+
+                // Check landing onto Grindable Pagoda Rooftops & Lantern Lines first!
+                if (player.vy >= 0) {
+                    for (let i = 0; i < grindSurfaces.length; i++) {
+                        const surf = grindSurfaces[i];
+                        if (player.x >= surf.x1 && player.x <= surf.x2) {
+                            const surfY = getGrindSurfaceY(surf, player.x);
+                            if (prevY <= surfY + 14 && player.y + player.vy >= surfY - 10) {
+                                player.grinding = true;
+                                player.grounded = false;
+                                player.activeGrindSurface = surf;
+                                player.grindTicks = 0;
+                                player.y = surfY;
+                                awardAirTricksOnLanding();
+                                audio.playGateChimeSfx();
+                                spawnLanternBurst(player.x, player.y, 7);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Check landing collision with Ground Terrain
+                const updatedGroundY = getTerrainY(player.x);
+                if (!player.grinding && player.y >= updatedGroundY && player.vy > 0) {
+                    const landingSlope = getTerrainSlopeAngle(player.x);
+                    const angleDiff = Math.abs(normalizeAngle(player.angle - landingSlope));
+                    const cleanLanding = angleDiff < 1.42;
+
+                    if (cleanLanding || zenMode || isTitleAutopilot) {
+                        player.y = updatedGroundY;
+                        player.grounded = true;
+                        player.angle = landingSlope;
+
+                        if (player.flipsCompletedInAir > 0) {
+                            awardAirTricksOnLanding();
+                        } else if (!cleanLanding && zenMode) {
+                            player.speed = Math.max(player.speed * 0.78, player.baseMinSpeed);
+                            spawnLanternBurst(player.x, player.y, 5);
+                        } else if (landingSlope > 0.18 && player.vy > 4.5) {
+                            player.speed = Math.min(player.speed + 1.1, player.maxSpeed);
+                        }
+                    } else {
+                        triggerCrash();
+                        return;
+                    }
+                }
+            }
+
+            // Advance player position
+            player.x += player.vx;
+            player.y += player.vy;
+            jumpPressedThisFrame = false;
+
+            // Update distance and checkpoints
+            if (currentState === GAME_STATE.PLAYING) {
+                distanceMeters = Math.max(0, Math.floor((player.x - startX) / 12));
+                score += player.speed * 0.08 * comboMultiplier;
+
+                if (distanceMeters >= nextCheckpointMeters) {
+                    nextCheckpointMeters += 250;
+                    launchFirework();
+                    showTrickFeedback(`${distanceMeters}m REACHED`, 'FESTIVAL SKIES BRIGHTEN');
+                }
+            }
+
+            // Update flowing scarf trail physics
+            const headOffsetX = Math.sin(player.angle) * 20;
+            const headOffsetY = -Math.cos(player.angle) * 20;
+            player.scarfNodes[0].x = player.x + headOffsetX;
+            player.scarfNodes[0].y = player.y + headOffsetY;
+
+            const segmentLength = 5.5;
+            for (let i = 1; i < player.scarfNodes.length; i++) {
+                const prev = player.scarfNodes[i - 1];
+                const node = player.scarfNodes[i];
+                node.y += Math.sin(Date.now() * 0.012 + i * 0.45) * 0.45 - 0.15;
+                node.x -= 0.8;
+
+                const dx = prev.x - node.x;
+                const dy = prev.y - node.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                if (dist > segmentLength) {
+                    node.x = prev.x - (dx / dist) * segmentLength;
+                    node.y = prev.y - (dy / dist) * segmentLength;
+                }
+            }
+
+            // Spawn new world chunks ahead of player
+            spawnWorldUpTo(player.x + width * 2.2);
+
+            // Cleanup old structures & check Paifang Archway pass-throughs
+            for (let i = structures.length - 1; i >= 0; i--) {
+                const st = structures[i];
+                const refX = st.x || st.x2;
+                if (refX < player.x - width * 1.2) {
+                    structures.splice(i, 1);
+                    continue;
+                }
+                if (st.type === 'archway' && !st.lit && Math.abs(player.x - st.x) < 35) {
+                    st.lit = true;
+                    st.litGlow = 1;
+                    score += 100 * comboMultiplier;
+                    player.boostTimer = Math.max(player.boostTimer, 70);
+                    audio.playGateChimeSfx();
+                    spawnLanternBurst(st.x, st.y - 65, 9);
+                }
+            }
+
+            // Cleanup old grind surfaces
+            for (let i = grindSurfaces.length - 1; i >= 0; i--) {
+                if (grindSurfaces[i].x2 < player.x - width) {
+                    grindSurfaces.splice(i, 1);
+                }
+            }
+
+            // Update Flora & Rustle Golden Ginkgo Leaves when player glides past
+            for (let i = floraItems.length - 1; i >= 0; i--) {
+                const fl = floraItems[i];
+                if (fl.x < player.x - width) {
+                    floraItems.splice(i, 1);
+                    continue;
+                }
+                if (!fl.rustled && Math.abs(player.x - fl.x) < 55 && Math.abs(player.y - fl.y) < 120) {
+                    fl.rustled = true;
+                    if (fl.type === 'ginkgo') {
+                        spawnFallingGinkgoLeaves(fl.x, fl.y, 10);
+                    }
+                }
+            }
+
+            // Update Interactive Perched Birds (Scatter into flight when player approaches!)
+            let scatteredThisFrame = false;
+            for (let i = perchedBirds.length - 1; i >= 0; i--) {
+                const b = perchedBirds[i];
+                if (b.x < player.x - width * 0.8 || b.y < camera.y - 600) {
+                    perchedBirds.splice(i, 1);
+                    continue;
+                }
+                if (b.state === 'perched') {
+                    const dist = Math.hypot(player.x - b.x, player.y - b.y);
+                    if (dist < 135) {
+                        b.state = 'flying';
+                        b.vx = player.vx * (0.85 + Math.random() * 0.35) + 1.5;
+                        b.vy = -2.2 - Math.random() * 2.6;
+                        scatteredThisFrame = true;
+                    }
+                } else {
+                    // Fly gracefully alongside & upward into the twilight sky
+                    b.x += b.vx;
+                    b.y += b.vy;
+                    b.vy -= 0.025;
+                    b.flapPhase += 0.32;
+                }
+            }
+            if (scatteredThisFrame) {
+                audio.playBirdScatterSfx();
+            }
+
+            // Check collectible orb collisions
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const orb = collectibles[i];
+                if (orb.collected) continue;
+                if (orb.x < player.x - width) {
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                const dist = Math.hypot(player.x - orb.x, (player.y - 14) - orb.y);
+                if (dist < orb.radius + 28) {
+                    orb.collected = true;
+                    lanternsCollected++;
+                    comboTimer = Math.max(comboTimer, 240);
+                    const pts = (orb.isJade ? 150 : 50) * comboMultiplier;
+                    score += pts;
+
+                    if (orb.isJade) {
+                        player.boostTimer = Math.max(player.boostTimer, 95);
+                        player.speed = Math.min(player.speed + 1.2, player.maxSpeed);
+                        showTrickFeedback('JADE LANTERN BLESSING', `+${pts} PTS • GOLDEN GLOW`);
+                    }
+
+                    audio.playCollectOrbSfx(lanternsCollected);
+                    spawnLanternBurst(orb.x, orb.y, orb.isJade ? 10 : 5);
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // Smooth camera tracking & dynamic zoom
+            const heightAboveGround = Math.max(0, groundY - player.y);
+            camera.targetZoom = Math.max(0.66, Math.min(1.0, 1.0 - (heightAboveGround / 950) - ((player.speed - 7.5) * 0.014)));
+            camera.zoom += (camera.targetZoom - camera.zoom) * 0.045;
+
+            const screenAnchorX = width * 0.24 / camera.zoom;
+            const screenAnchorY = height * 0.56 / camera.zoom;
+
+            const targetCamX = player.x - screenAnchorX;
+            const targetCamY = player.y - screenAnchorY;
+
+            camera.x += (targetCamX - camera.x) * 0.14;
+            camera.y += (targetCamY - camera.y) * 0.10;
+
+            updateHUD();
+        }
+
+        function triggerCrash() {
+            currentState = GAME_STATE.CRASHED;
+            highScore = Math.max(highScore, Math.floor(score));
+            document.getElementById('finalScore').textContent = Math.floor(score).toLocaleString();
+            document.getElementById('finalDistance').textContent = `${distanceMeters.toLocaleString()} m`;
+            document.getElementById('bestScore').textContent = highScore.toLocaleString();
+
+            const crashOverlay = document.getElementById('crashOverlay');
+            crashOverlay.classList.remove('hidden');
+            crashOverlay.classList.add('flex');
+        }
+
+        /**
+         * ============================================================================
+         * 5. RENDERING ENGINE (DYNAMIC SKY, HARBOR CITY, BIRDS, ARCHITECTURE, FLORA)
+         * ============================================================================
+         */
+        function lerpHexColor(hexA, hexB, t) {
+            const a = parseInt(hexA.slice(1), 16);
+            const b = parseInt(hexB.slice(1), 16);
+            const r = Math.round(((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * t);
+            const g = Math.round(((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * t);
+            const bl = Math.round((a & 255) + ((b & 255) - (a & 255)) * t);
+            return `rgb(${r}, ${g}, ${bl})`;
+        }
+
+        const skyPhases = [
+            // Festival Starlit Twilight
+            ['#070917', '#131836', '#2a2344', '#4f2d3f'],
+            // Deep Midnight Aurora Indigo
+            ['#040611', '#0c142c', '#1a2747', '#353252'],
+            // Soft Rose & Golden Dawn
+            ['#121026', '#2b1e3e', '#592e49', '#8c4946'],
+            // Warm Amber Sunset Dusk
+            ['#0d1124', '#232142', '#4c2c47', '#7c3f38']
+        ];
+
+        function drawSkyMoonAndFlocks(time) {
+            // Smoothly cycle through atmospheric twilight palettes
+            const cyclePos = (time * 0.000018) % skyPhases.length;
+            const idxA = Math.floor(cyclePos);
+            const idxB = (idxA + 1) % skyPhases.length;
+            const frac = cyclePos - idxA;
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+            skyGrad.addColorStop(0.0, lerpHexColor(skyPhases[idxA][0], skyPhases[idxB][0], frac));
+            skyGrad.addColorStop(0.38, lerpHexColor(skyPhases[idxA][1], skyPhases[idxB][1], frac));
+            skyGrad.addColorStop(0.72, lerpHexColor(skyPhases[idxA][2], skyPhases[idxB][2], frac));
+            skyGrad.addColorStop(1.0, lerpHexColor(skyPhases[idxA][3], skyPhases[idxB][3], frac));
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Twinkling stars
+            stars.forEach(s => {
+                const twinkle = 0.35 + 0.65 * Math.sin(time * 0.002 + s.phase);
+                ctx.fillStyle = `rgba(255, 245, 220, ${twinkle * 0.85})`;
+                ctx.beginPath();
+                ctx.arc(s.x * width, s.y * height, s.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Luminous Full Moon with soft halo
+            const moonX = width * 0.78;
+            const moonY = height * 0.19;
+            const moonRadius = Math.min(width, height) * 0.062;
+
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.4, moonX, moonY, moonRadius * 4.2);
+            moonGlow.addColorStop(0, 'rgba(255, 242, 204, 0.38)');
+            moonGlow.addColorStop(0.4, 'rgba(255, 195, 113, 0.12)');
+            moonGlow.addColorStop(1, 'rgba(255, 195, 113, 0)');
+            ctx.fillStyle = moonGlow;
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonRadius * 4.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fff9e6';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Render Distant V-Formation Bird Flocks (Cranes & Swallows)
+            skyFlocks.forEach(flock => {
+                flock.x += flock.speed - player.vx * 0.04;
+                const flockY = flock.y + Math.sin(time * 0.0012 + flock.wavePhase) * 12;
+                if (flock.x > width + 180) {
+                    flock.x = -180;
+                    flock.y = height * (0.12 + Math.random() * 0.32);
+                } else if (flock.x < -220) {
+                    flock.x = width + 160;
+                }
+
+                flock.members.forEach(m => {
+                    const bx = flock.x + m.offsetX;
+                    const by = flockY + m.offsetY;
+                    const wingY = Math.sin(time * 0.009 + m.flapPhase) * 5.5 * flock.scale;
+                    drawBirdSilhouette(bx, by, 7 * flock.scale, wingY, 'rgba(255, 236, 195, 0.65)');
+                });
+            });
+        }
+
+        function drawBirdSilhouette(x, y, span, wingTipY, color) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(1.2, span * 0.22);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x - span, y + wingTipY);
+            ctx.quadraticCurveTo(x - span * 0.4, y - Math.abs(wingTipY) * 0.4, x, y);
+            ctx.quadraticCurveTo(x + span * 0.4, y - Math.abs(wingTipY) * 0.4, x + span, y + wingTipY);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        /**
+         * Draw parallax mountains, silhouettes of Liyue Harbor city, pagodas, and valley mist
+         */
+        function drawParallaxLayer(parallaxFactor, baseHeightRatio, amp, freq, fillColor, mistColor, layerType = 'none') {
+            const scrollX = camera.x * parallaxFactor;
+            ctx.fillStyle = fillColor;
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+
+            const step = 18;
+            for (let sx = 0; sx <= width + step; sx += step) {
+                const wx = sx + scrollX;
+                const n1 = Math.sin(wx * freq) * amp;
+                const n2 = Math.cos(wx * freq * 2.3 + 1.2) * (amp * 0.48);
+                const karstPeak = Math.pow(Math.max(0, Math.sin(wx * freq * 0.65 + 0.5)), 3) * (amp * 1.15);
+                const py = height * baseHeightRatio - n1 - n2 - karstPeak;
+                ctx.lineTo(sx, py);
+            }
+
+            ctx.lineTo(width, height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Distant Glowing Harbor City Cluster
+            if (layerType === 'harbor') {
+                const citySpacing = 1250;
+                const firstIdx = Math.floor(scrollX / citySpacing);
+                for (let idx = firstIdx; idx <= firstIdx + 2; idx++) {
+                    const worldCityX = idx * citySpacing + 600;
+                    const screenX = worldCityX - scrollX;
+                    if (screenX < -220 || screenX > width + 220) continue;
+
+                    const n1 = Math.sin(worldCityX * freq) * amp;
+                    const n2 = Math.cos(worldCityX * freq * 2.3 + 1.2) * (amp * 0.48);
+                    const baseY = height * baseHeightRatio - n1 - n2 + 12;
+                    drawDistantHarborCluster(screenX, baseY, fillColor);
+                }
+            }
+
+            // Mid-ground Silhouetted Liyue Pagodas & Mountain Bridges
+            if (layerType === 'pagodas') {
+                const pagodaSpacing = 760;
+                const firstIndex = Math.floor(scrollX / pagodaSpacing);
+                for (let idx = firstIndex; idx <= firstIndex + 2; idx++) {
+                    const worldPagodaX = idx * pagodaSpacing + 360;
+                    const screenX = worldPagodaX - scrollX;
+                    if (screenX < -120 || screenX > width + 120) continue;
+
+                    const n1 = Math.sin(worldPagodaX * freq) * amp;
+                    const n2 = Math.cos(worldPagodaX * freq * 2.3 + 1.2) * (amp * 0.48);
+                    const karstPeak = Math.pow(Math.max(0, Math.sin(worldPagodaX * freq * 0.65 + 0.5)), 3) * (amp * 1.15);
+                    const baseY = height * baseHeightRatio - n1 - n2 - karstPeak + 6;
+
+                    drawPagodaSilhouette(screenX, baseY, fillColor);
+                }
+            }
+
+            // Soft volumetric valley mist band
+            if (mistColor) {
+                const mistGrad = ctx.createLinearGradient(0, height * baseHeightRatio - amp * 1.1, 0, height);
+                mistGrad.addColorStop(0, 'rgba(0,0,0,0)');
+                mistGrad.addColorStop(0.65, mistColor);
+                mistGrad.addColorStop(1, 'rgba(12, 14, 30, 0.35)');
+                ctx.fillStyle = mistGrad;
+                ctx.fillRect(0, height * baseHeightRatio - amp * 1.1, width, height);
+            }
+        }
+
+        function drawDistantHarborCluster(x, y, silhouetteColor) {
+            ctx.save();
+            // Tiered mountainside pavilions & warm festive harbor lights
+            drawPagodaSilhouette(x, y - 18, silhouetteColor);
+            drawPagodaSilhouette(x - 52, y + 4, silhouetteColor);
+            drawPagodaSilhouette(x + 48, y + 8, silhouetteColor);
+
+            // Warm harbor window grid & water shimmer reflections below
+            ctx.fillStyle = 'rgba(255, 195, 95, 0.75)';
+            for (let i = -65; i <= 65; i += 13) {
+                const wy = y + Math.abs(i) * 0.18;
+                ctx.fillRect(x + i, wy, 4, 3);
+                ctx.fillRect(x + i + 5, wy + 7, 3, 3);
+            }
+            ctx.restore();
+        }
+
+        function drawPagodaSilhouette(x, y, silhouetteColor) {
+            ctx.save();
+            ctx.fillStyle = silhouetteColor;
+
+            const tiers = [
+                { w: 50, h: 16, yOff: 0 },
+                { w: 38, h: 14, yOff: -15 },
+                { w: 28, h: 12, yOff: -28 }
+            ];
+
+            tiers.forEach(t => {
+                const ty = y + t.yOff;
+                ctx.fillRect(x - t.w * 0.32, ty - t.h, t.w * 0.64, t.h);
+
+                // Curved upturned pagoda roof eaves
+                ctx.beginPath();
+                ctx.moveTo(x - t.w * 0.68, ty - t.h + 1);
+                ctx.quadraticCurveTo(x, ty - t.h - 10, x + t.w * 0.68, ty - t.h + 1);
+                ctx.lineTo(x + t.w * 0.45, ty - t.h + 5);
+                ctx.lineTo(x - t.w * 0.45, ty - t.h + 5);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            ctx.fillRect(x - 1.5, y - 52, 3, 14);
+
+            // Glowing warm golden windows
+            ctx.fillStyle = '#ffbe55';
+            ctx.shadowColor = '#ff9e2c';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(x - 5, y - 10, 3.5, 5);
+            ctx.fillRect(x + 1.5, y - 10, 3.5, 5);
+            ctx.fillRect(x - 2, y - 24, 4, 4);
+            ctx.restore();
+        }
+
+        function drawFloatingSkyLanterns(time) {
+            bgLanterns.forEach(l => {
+                l.y -= l.riseSpeed;
+                l.x += Math.sin(time * l.swayFreq + l.phase) * l.swayAmp - (player.vx * 0.035 * l.depth);
+
+                if (l.y < -40) {
+                    l.y = height + 30;
+                    l.x = Math.random() * width;
+                }
+                if (l.x < -40) l.x = width + 35;
+                if (l.x > width + 40) l.x = -35;
+
+                const glowRadius = l.size * 2.4;
+                const grad = ctx.createRadialGradient(l.x, l.y, l.size * 0.15, l.x, l.y, glowRadius);
+                grad.addColorStop(0, 'rgba(255, 235, 175, 0.95)');
+                grad.addColorStop(0.35, 'rgba(255, 168, 52, 0.45)');
+                grad.addColorStop(1, 'rgba(255, 120, 20, 0)');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(l.x, l.y, glowRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffd984';
+                const w = l.size * 0.72;
+                const h = l.size * 0.92;
+                ctx.beginPath();
+                ctx.roundRect(l.x - w / 2, l.y - h / 2, w, h, 3);
+                ctx.fill();
+            });
+        }
+
+        function drawFireworks() {
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const fw = fireworks[i];
+                for (let j = fw.sparks.length - 1; j >= 0; j--) {
+                    const s = fw.sparks[j];
+                    s.x += s.vx;
+                    s.y += s.vy;
+                    s.vy += 0.032;
+                    s.vx *= 0.985;
+                    s.vy *= 0.985;
+                    s.alpha -= s.decay;
+
+                    if (s.alpha <= 0) {
+                        fw.sparks.splice(j, 1);
+                        continue;
+                    }
+
+                    ctx.save();
+                    ctx.globalAlpha = s.alpha;
+                    ctx.fillStyle = s.color;
+                    ctx.shadowColor = s.color;
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                if (fw.sparks.length === 0) {
+                    fireworks.splice(i, 1);
+                }
+            }
+        }
+
+        /**
+         * Draw Foreground Flora (Golden Ginkgo Trees & Swaying Bamboo Groves)
+         */
+        function drawFloraItem(fl, time) {
+            const sway = Math.sin(time * 0.0022 + fl.swayPhase) * 4 * fl.scale;
+            ctx.save();
+            ctx.translate(fl.x, fl.y);
+            ctx.scale(fl.scale, fl.scale);
+
+            if (fl.type === 'ginkgo') {
+                // Curved dark wood trunk
+                ctx.strokeStyle = '#1b162a';
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(0, 4);
+                ctx.quadraticCurveTo(-5, -35, sway * 0.4, -68);
+                ctx.stroke();
+
+                // Glowing golden ginkgo foliage clusters
+                const clusters = [
+                    { cx: -22 + sway, cy: -65, r: 22, col: '#f59e0b' },
+                    { cx: 20 + sway, cy: -60, r: 20, col: '#fbbf24' },
+                    { cx: sway * 1.1, cy: -82, r: 26, col: '#fcd34d' }
+                ];
+                clusters.forEach(c => {
+                    ctx.fillStyle = c.col;
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else {
+                // Slender swaying bamboo stalks
+                const stalks = [-10, 0, 11];
+                stalks.forEach((ox, idx) => {
+                    const stalkSway = sway * (0.8 + idx * 0.25);
+                    ctx.strokeStyle = '#1f3a3d';
+                    ctx.lineWidth = 3.2;
+                    ctx.beginPath();
+                    ctx.moveTo(ox, 4);
+                    ctx.quadraticCurveTo(ox + stalkSway * 0.5, -45, ox + stalkSway, -92 + idx * 8);
+                    ctx.stroke();
+
+                    // Bamboo leaves
+                    ctx.fillStyle = '#2ec4b6';
+                    ctx.beginPath();
+                    ctx.ellipse(ox + stalkSway + 6, -75 + idx * 6, 9, 3, 0.35, 0, Math.PI * 2);
+                    ctx.ellipse(ox + stalkSway - 6, -60 + idx * 6, 8, 2.8, -0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            ctx.restore();
+        }
+
+        /**
+         * Draw Interactive Foreground Buildings (Liyue Pavilions, Lantern Lines, Paifang Gates)
+         */
+        function drawStructure(st, time) {
+            ctx.save();
+            if (st.type === 'pavilion') {
+                const { x1, x2, groundY1, groundY2, roofY1, roofY2 } = st;
+                const midX = (x1 + x2) / 2;
+                const midRoofY = (roofY1 + roofY2) / 2 - 6;
+
+                // Traditional Red/Crimson Wooden Pillars
+                ctx.strokeStyle = '#6b1d2f';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(x1 + 14, roofY1 + 4);
+                ctx.lineTo(x1 + 14, groundY1 + 10);
+                ctx.moveTo(x2 - 14, roofY2 + 4);
+                ctx.lineTo(x2 - 14, groundY2 + 10);
+                ctx.moveTo(midX, midRoofY + 8);
+                ctx.lineTo(midX, (groundY1 + groundY2) / 2 + 10);
+                ctx.stroke();
+
+                // Warm Glowing Paper Screen Windows inside Pavilion
+                ctx.fillStyle = 'rgba(255, 200, 95, 0.28)';
+                ctx.fillRect(x1 + 26, roofY1 + 10, (x2 - x1) - 52, 26);
+
+                // Hanging Glowing Red/Gold Festival Lanterns under the eaves
+                [x1 + 38, midX, x2 - 38].forEach((lx, i) => {
+                    const ly = roofY1 + (roofY2 - roofY1) * ((lx - x1) / (x2 - x1)) + 14;
+                    const swayX = Math.sin(time * 0.003 + i) * 2.5;
+                    drawHangingFestivalLantern(lx + swayX, ly);
+                });
+
+                // Sweeping Upturned Liyue Pavilion Roof (Grindable Surface!)
+                ctx.fillStyle = '#181a30';
+                ctx.strokeStyle = '#ffcf70';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x1 - 18, roofY1 - 4);
+                ctx.quadraticCurveTo(midX, midRoofY - 12, x2 + 18, roofY2 - 4);
+                ctx.lineTo(x2 + 8, roofY2 + 7);
+                ctx.quadraticCurveTo(midX, midRoofY + 2, x1 - 8, roofY1 + 7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+            } else if (st.type === 'lantern_line' || st.type === 'dual_pole_line') {
+                // Draw wooden support poles
+                ctx.strokeStyle = '#4a2535';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                if (st.type === 'dual_pole_line') {
+                    ctx.moveTo(st.x1, st.y1);
+                    ctx.lineTo(st.x1, st.g1 + 8);
+                }
+                ctx.moveTo(st.x2, st.y2);
+                ctx.lineTo(st.x2, (st.poleGroundY || st.g2) + 8);
+                ctx.stroke();
+
+                // Draw glowing catenary lantern rope
+                const midX = (st.x1 + st.x2) / 2;
+                const midY = (st.y1 + st.y2) / 2 + st.sag * 2;
+                ctx.strokeStyle = '#ffcf70';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(st.x1, st.y1);
+                ctx.quadraticCurveTo(midX, midY, st.x2, st.y2);
+                ctx.stroke();
+
+                // Draw hanging lanterns along the rope
+                const lanternSteps = 6;
+                for (let i = 1; i < lanternSteps; i++) {
+                    const t = i / lanternSteps;
+                    const lx = st.x1 + t * (st.x2 - st.x1);
+                    const ly = st.y1 + t * (st.y2 - st.y1) + Math.sin(t * Math.PI) * st.sag;
+                    const swayX = Math.sin(time * 0.0035 + i) * 2;
+                    drawHangingFestivalLantern(lx + swayX, ly + 8);
+                }
+
+            } else if (st.type === 'archway') {
+                // Traditional Paifang / Torii Archway on the slope
+                const { x, y, lit } = st;
+                ctx.strokeStyle = lit ? '#ffbe55' : '#5e2135';
+                ctx.lineWidth = 6.5;
+                ctx.beginPath();
+                ctx.moveTo(x - 24, y + 6);
+                ctx.lineTo(x - 24, y - 98);
+                ctx.moveTo(x + 24, y + 8);
+                ctx.lineTo(x + 24, y - 98);
+                ctx.stroke();
+
+                // Upturned double crossbeams
+                ctx.fillStyle = lit ? '#ffd166' : '#1b1d36';
+                ctx.strokeStyle = '#ffbe55';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.moveTo(x - 42, y - 102);
+                ctx.quadraticCurveTo(x, y - 116, x + 42, y - 102);
+                ctx.lineTo(x + 34, y - 94);
+                ctx.quadraticCurveTo(x, y - 104, x - 34, y - 94);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Center festive lantern under archway
+                drawHangingFestivalLantern(x, y - 84, lit ? 1.35 : 1.0);
+            }
+            ctx.restore();
+        }
+
+        function drawHangingFestivalLantern(x, y, scale = 1.0) {
+            ctx.save();
+            const r = 14 * scale;
+            const glow = ctx.createRadialGradient(x, y, 2, x, y, r);
+            glow.addColorStop(0, 'rgba(255, 235, 165, 0.95)');
+            glow.addColorStop(0.45, 'rgba(255, 120, 45, 0.45)');
+            glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff6b4a';
+            ctx.beginPath();
+            ctx.ellipse(x, y, 4.5 * scale, 6 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(x - 2 * scale, y - 6.5 * scale, 4 * scale, 2 * scale);
+            ctx.fillRect(x - 1 * scale, y + 6 * scale, 2 * scale, 4 * scale);
+            ctx.restore();
+        }
+
+        /**
+         * Draw Foreground World Scene: Flora, Structures, Terrain, Birds, Orbs & Player
+         */
+        function drawWorldScene(time) {
+            ctx.save();
+            ctx.scale(camera.zoom, camera.zoom);
+            ctx.translate(-camera.x, -camera.y);
+
+            const viewWidth = width / camera.zoom;
+            const viewHeight = height / camera.zoom;
+            const startWorldX = camera.x - 120;
+            const endWorldX = camera.x + viewWidth + 120;
+
+            // 1. Draw Background Flora (Ginkgo & Bamboo Groves behind terrain crest)
+            floraItems.forEach(fl => {
+                if (fl.x >= startWorldX && fl.x <= endWorldX) {
+                    drawFloraItem(fl, time);
+                }
+            });
+
+            // 2. Draw Interactive Architectural Structures (Pavilions, Lantern Lines, Archways)
+            structures.forEach(st => {
+                const refX = st.x || st.x1;
+                if (refX >= startWorldX - 300 && refX <= endWorldX + 300) {
+                    drawStructure(st, time);
+                }
+            });
+
+            // 3. Draw Main Foreground Terrain Slope
+            const terrainGrad = ctx.createLinearGradient(0, camera.y, 0, camera.y + viewHeight);
+            terrainGrad.addColorStop(0, '#18182c');
+            terrainGrad.addColorStop(0.5, '#101122');
+            terrainGrad.addColorStop(1, '#080914');
+
+            ctx.fillStyle = terrainGrad;
+            ctx.beginPath();
+            ctx.moveTo(startWorldX, camera.y + viewHeight + 300);
+
+            const step = 14;
+            for (let wx = startWorldX; wx <= endWorldX; wx += step) {
+                ctx.lineTo(wx, getTerrainY(wx));
+            }
+            ctx.lineTo(endWorldX, camera.y + viewHeight + 300);
+            ctx.closePath();
+            ctx.fill();
+
+            // Golden moonlight rim highlight along slope crest
+            ctx.strokeStyle = player.boostTimer > 0 ? 'rgba(255, 215, 115, 0.85)' : 'rgba(255, 190, 105, 0.48)';
+            ctx.lineWidth = player.boostTimer > 0 ? 4 : 2.5;
+            ctx.beginPath();
+            for (let wx = startWorldX; wx <= endWorldX; wx += step) {
+                const ty = getTerrainY(wx);
+                if (wx === startWorldX) ctx.moveTo(wx, ty);
+                else ctx.lineTo(wx, ty);
+            }
+            ctx.stroke();
+
+            // 4. Draw Interactive Perched & Scattered Birds
+            perchedBirds.forEach(b => {
+                if (b.x < startWorldX - 50 || b.x > endWorldX + 50) return;
+                if (b.state === 'perched') {
+                    // Cozy perched bird silhouette
+                    ctx.fillStyle = b.color;
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y - 3, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(b.x - 3, b.y - 2);
+                    ctx.lineTo(b.x - 7, b.y - 5);
+                    ctx.lineTo(b.x - 1, b.y - 5);
+                    ctx.fill();
+                } else {
+                    const wingY = Math.sin(b.flapPhase) * 6;
+                    drawBirdSilhouette(b.x, b.y, 7.5, wingY, b.color);
+                }
+            });
+
+            // 5. Draw Drifting Golden Ginkgo Leaves
+            for (let i = fallingLeaves.length - 1; i >= 0; i--) {
+                const lf = fallingLeaves[i];
+                lf.x += lf.vx;
+                lf.y += lf.vy + Math.sin(time * 0.005 + i) * 0.35;
+                lf.angle += lf.spin;
+                lf.alpha -= 0.004;
+                if (lf.alpha <= 0) {
+                    fallingLeaves.splice(i, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.translate(lf.x, lf.y);
+                ctx.rotate(lf.angle);
+                ctx.globalAlpha = lf.alpha;
+                ctx.fillStyle = lf.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, lf.size, lf.size * 0.55, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 6. Draw Collectible Jade & Lantern Orbs
+            collectibles.forEach(orb => {
+                if (orb.x < startWorldX - 50 || orb.x > endWorldX + 50) return;
+                const bobY = orb.y + Math.sin(time * 0.004 + orb.pulsePhase) * 5;
+
+                const auraRadius = orb.isJade ? 32 : 24;
+                const auraGrad = ctx.createRadialGradient(orb.x, bobY, 2, orb.x, bobY, auraRadius);
+                if (orb.isJade) {
+                    auraGrad.addColorStop(0, 'rgba(114, 239, 221, 0.95)');
+                    auraGrad.addColorStop(0.45, 'rgba(86, 207, 225, 0.35)');
+                    auraGrad.addColorStop(1, 'rgba(86, 207, 225, 0)');
+                } else {
+                    auraGrad.addColorStop(0, 'rgba(255, 230, 150, 0.95)');
+                    auraGrad.addColorStop(0.45, 'rgba(255, 175, 65, 0.38)');
+                    auraGrad.addColorStop(1, 'rgba(255, 140, 30, 0)');
+                }
+                ctx.fillStyle = auraGrad;
+                ctx.beginPath();
+                ctx.arc(orb.x, bobY, auraRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.save();
+                ctx.translate(orb.x, bobY);
+                if (orb.isJade) {
+                    ctx.rotate(Math.PI / 4);
+                    ctx.fillStyle = '#cbf3f0';
+                    ctx.fillRect(-7, -7, 14, 14);
+                } else {
+                    ctx.fillStyle = '#ffe599';
+                    ctx.beginPath();
+                    ctx.roundRect(-6, -8, 12, 16, 4);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 7. Draw World Particles & Grind Sparks
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 8. Draw Flowing Golden Silk Scarf
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            for (let i = 0; i < player.scarfNodes.length - 1; i++) {
+                const n1 = player.scarfNodes[i];
+                const n2 = player.scarfNodes[i + 1];
+                const ratio = 1 - i / player.scarfNodes.length;
+
+                ctx.strokeStyle = player.boostTimer > 0
+                    ? `rgba(114, 239, 221, ${ratio * 0.92})`
+                    : `rgba(255, 200, 95, ${ratio * 0.9})`;
+                ctx.lineWidth = 1.5 + ratio * 5.5;
+                ctx.beginPath();
+                ctx.moveTo(n1.x, n1.y);
+                ctx.lineTo(n2.x, n2.y);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 9. Draw Player Character (Silhouetted Traveler in Conical Hat + Glowing Glider Board)
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+
+            const playerGlow = ctx.createRadialGradient(0, -16, 4, 0, -16, player.boostTimer > 0 ? 52 : 34);
+            playerGlow.addColorStop(0, player.boostTimer > 0 ? 'rgba(114, 239, 221, 0.35)' : 'rgba(255, 195, 100, 0.25)');
+            playerGlow.addColorStop(1, 'rgba(255, 195, 100, 0)');
+            ctx.fillStyle = playerGlow;
+            ctx.beginPath();
+            ctx.arc(0, -16, 52, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glowing Jade/Gold Glider Board
+            ctx.strokeStyle = player.grinding ? '#72efdd' : '#ffcf70';
+            ctx.lineWidth = 3.2;
+            ctx.beginPath();
+            ctx.moveTo(-18, -1);
+            ctx.lineTo(18, -1);
+            ctx.quadraticCurveTo(24, -1, 27, -6);
+            ctx.stroke();
+
+            // Traveler Cloak / Silhouette Body
+            ctx.fillStyle = '#0c0d1a';
+            ctx.beginPath();
+            ctx.moveTo(-10, -2);
+            ctx.lineTo(-4, -22);
+            ctx.lineTo(6, -22);
+            ctx.lineTo(10, -2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(1, -25, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Iconic Bamboo Conical Hat with warm gold trim
+            ctx.beginPath();
+            ctx.moveTo(-16, -25);
+            ctx.quadraticCurveTo(1, -37, 18, -25);
+            ctx.closePath();
+            ctx.fillStyle = '#14172b';
+            ctx.fill();
+            ctx.strokeStyle = '#ffbe55';
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        /**
+         * ============================================================================
+         * 6. MAIN 60FPS ANIMATION LOOP
+         * ============================================================================
+         */
+        function gameLoop(timestamp) {
+            const time = timestamp || performance.now();
+
+            updatePhysics();
+
+            // Render Dynamic Sky, Moon & V-Formation Bird Flocks
+            drawSkyMoonAndFlocks(time);
+
+            // Render Multi-layered Parallax Mountains, Distant Harbor City & Pagodas
+            drawParallaxLayer(0.05, 0.67, 70, 0.0014, '#181832', 'rgba(42, 32, 62, 0.24)', 'harbor');
+            drawParallaxLayer(0.14, 0.76, 85, 0.0021, '#121329', 'rgba(255, 185, 95, 0.09)', 'pagodas');
+            drawParallaxLayer(0.26, 0.85, 65, 0.0032, '#0c0e1f', 'rgba(18, 22, 45, 0.28)', 'none');
+
+            // Render Floating Xiao Lanterns & Festive Fireworks
+            drawFloatingSkyLanterns(time);
+            drawFireworks();
+
+            // Render Foreground Flora, Interactive Buildings, Birds, Terrain & Player
+            drawWorldScene(time);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            spawnWorldUpTo(2800);
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
